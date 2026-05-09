@@ -62,6 +62,34 @@ float rotEngranaje4Offset;
 float rotEngranaje5;
 float rotEngranaje5Offset;
 
+//variables para la animacion de zero
+float timerEspera = 0.0f;//timer para la animacion del hombro der
+bool inicio = 0;//bandera que va iniciar el timer y el inicio de la animacion del hombro derecho
+
+float timerHI = 0.0f;//timer para la animacion del hombro izq
+bool siguiente = 0;//bandera que va iniciar la animacion del hombro izq
+
+float timerD = 0.0f;//timer para la animacion de las esferas de energia disparadas
+float timerD2 = 0.0f;
+float timerD3 = 0.0f;
+//variables para que inicie la animacion del disparo de energia
+bool disparo1 = 0;
+bool disparo2 = 0;
+bool disparo3 = 0;
+
+//variables para las rotaciones de zero y sus incrementos
+float rotHombroD;//para el hombro derecho
+float rotHombroDOffset;
+float rotHombroI;//para el hombro izq
+float rotHombroIOffset;
+float rotCodoI;//para el codo
+float rotCodoIOffset;
+float movEsferaE;//para mover las esferas de energia
+float movEsferaEOffset;
+float movEsferaE2;//para mover las esferas de energia
+float movEsferaE2Offset;
+float movEsferaE3;//para mover las esferas de energia
+float movEsferaE3Offset;
 
 Window mainWindow;
 std::vector<Mesh*> meshList;
@@ -85,11 +113,15 @@ Model EngranajeCono2_M;//Engranaje cono superior
 Model EngranajeF1_M;//Engranaje frotando derecho
 Model EngranajeF2_M;//Engranaje frotando izquierdo
 
-//modelos de zero
+//Modelos de Zero
 Model ZeroCuerpo_M;
+Model ZeroHombroDer_M;
 Model ZeroBrazoDer_M;
+Model ZeroHombroIzq_M;
 Model ZeroBrazoIzq_M;
-Model ZeroAntebrazoIzq_M;
+Model ZeroCodoIzq_M;
+Model ZeroManoIzq_M;
+Model ZeroEsferaE_M;
 
 /*Model Kitt_M;*/
 
@@ -318,12 +350,20 @@ int main()
 	//Zero
 	ZeroCuerpo_M = Model();
 	ZeroCuerpo_M.LoadModel("Models/zero_cuerpo.obj");
+	ZeroHombroDer_M = Model();
+	ZeroHombroDer_M.LoadModel("Models/zero_hombroDer.obj");
 	ZeroBrazoDer_M = Model();
 	ZeroBrazoDer_M.LoadModel("Models/zero_brazoDer.obj");
+	ZeroHombroIzq_M = Model();
+	ZeroHombroIzq_M.LoadModel("Models/zero_hombroIzq.obj");
 	ZeroBrazoIzq_M = Model();
 	ZeroBrazoIzq_M.LoadModel("Models/zero_brazoIzq.obj");
-	ZeroAntebrazoIzq_M = Model();
-	ZeroAntebrazoIzq_M.LoadModel("Models/zero_antebrazoIzq.obj");
+	ZeroCodoIzq_M = Model();
+	ZeroCodoIzq_M.LoadModel("Models/zero_codoIzq.obj");
+	ZeroManoIzq_M = Model();
+	ZeroManoIzq_M.LoadModel("Models/zero_manoIzq.obj");
+	ZeroEsferaE_M = Model();
+	ZeroEsferaE_M.LoadModel("Models/zero_esferaE.obj");
 
 	
 	/*
@@ -394,9 +434,17 @@ int main()
 
 	glm::mat4 model(1.0);
 	glm::mat4 modelaux(1.0);
+
+	//modelos auxiliares de la fortaleza
+	glm::mat4 modelauxE(1.0);
 	glm::mat4 modelauxD(1.0);
 	glm::mat4 modelauxF(1.0);
-	glm::mat4 modelauxE(1.0);
+
+	//modelos auxiliares de zero
+	glm::mat4 modelauxZ(1.0);
+	glm::mat4 modelauxHDerZ(1.0);
+	glm::mat4 modelauxHIzqZ(1.0);
+
 	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec2 toffset = glm::vec2(0.0f, 0.0f);
 
@@ -411,6 +459,25 @@ int main()
 	rotEngranaje4 = 0;
 	rotEngranaje4Offset = 0.2f;
 
+	//inicializacion de las variables que van hacer girar el hombro derecho de zero
+	rotHombroD = 0.0f;
+	rotHombroDOffset = 2.5;
+
+	//inicializacion de las variables que van hacer girar el hombro izq de zero
+	rotHombroI = 0.0f;
+	rotHombroIOffset = 2.5;
+
+	//inicializacion de las variables que van hacer girar el codo izq de zero
+	rotCodoI = 0.0f;
+	rotCodoIOffset = 2.5;
+
+	//inicializacion de las variables que avancen las esferas de energia
+	movEsferaE = 0.0f;
+	movEsferaEOffset = 0.4;
+	movEsferaE2 = 0.0f;
+	movEsferaE2Offset = 0.4;
+	movEsferaE3 = 0.0f;
+	movEsferaE3Offset = 0.4;
 
 	// Posiciones 
 	glm::vec3 posModelo = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -441,6 +508,11 @@ int main()
 			cameraFP.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
 		}*/
 		
+		//para el incremento en las rotaciones de los engranajes
+		rotEngranaje += rotEngranajeOffset * deltaTime;
+		rotEngranaje2 += rotEngranaje2Offset * deltaTime;
+		rotEngranaje3 += rotEngranaje3Offset * deltaTime;
+		rotEngranaje4 += rotEngranaje4Offset * deltaTime;
 
 		// Clear the window
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -827,6 +899,200 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		EngranajeF2_M.RenderModel();//*/
 
+		//para el inicio de la animacion del hombro derecho de zero
+		if (mainWindow.getsKeys()[GLFW_KEY_I]) {//cuando se presione la tecla I
+			inicio = 1;//bandera
+		}
+
+		//para el reseteo de la animacion en general
+		if (mainWindow.getsKeys()[GLFW_KEY_R]) {//cuando se presione la tecla R
+			//para el hombro der
+			inicio = 0;
+			timerEspera = 0;
+			rotHombroD = 0;
+
+			//para el hombro izq
+			siguiente = 0;
+			timerHI = 0;
+			rotHombroI = 0;
+			rotCodoI = 0;
+
+			//para la esfera de energia
+			disparo1 = 0;
+			disparo2 = 0;
+			disparo3 = 0;
+			timerD = 0;
+			timerD2 = 0;
+			timerD3 = 0;
+			movEsferaE = 0;
+			movEsferaE2 = 0;
+			movEsferaE3 = 0;
+		}
+
+		//PARA EL HOMBRO DERECHO
+		if (inicio) {
+			timerEspera++;//inicio del timer
+		}
+
+		if (timerEspera < 300 and inicio) {//de 0 a 300
+			if (rotHombroD < 90) {//para que el limite de la rotacion sea 90º
+				rotHombroD += rotHombroDOffset * deltaTime;//incremento
+			}
+			/*else {
+				siguiente = 1;
+				//printf("\ntimerEspera %f", timerEspera);
+			}//*/
+		}
+
+		if (timerEspera > 50) {//para activar la siguiente animacion (hombro izq) a la mitad de la animacion del hombro der
+			siguiente = 1;
+		}
+
+		//PARA EL HOMBRO IZQUIERDO
+		if (siguiente) {
+			timerHI++;
+		}
+
+		if (timerHI < 300 and siguiente) {//de 0 a 300
+			if (rotHombroI < 90) {//para que el limite de la rotacion sea 90º
+				rotHombroI += rotHombroIOffset * deltaTime;//incremento
+				rotCodoI += rotCodoIOffset * deltaTime;
+			}
+			else {
+				disparo1 = 1;
+				//printf("\ntimerEspera %f", timerEspera);
+			}//*/
+		}
+
+		//PARA LAS ESFERAS DE ENERGIA
+		//primera esfera de energia
+		if (disparo1) {
+			timerD++;
+		}
+
+		if (timerD < 1000 and disparo1) {//de 0 a 1000
+			movEsferaE += movEsferaEOffset * deltaTime;//incremento
+		}
+
+		if (timerD > 30) {
+			disparo2 = 1;
+		}
+
+		//segunda esfera de energia
+		if (disparo2) {
+			timerD2++;
+		}
+
+		if (timerD2 < 1000 and disparo2) {//de 0 a 1000
+			movEsferaE2 += movEsferaE2Offset * deltaTime;//incremento
+		}
+
+		if (timerD2 > 30) {
+			disparo3 = 1;
+		}
+
+		//tercera esfera de energia
+		if (disparo3) {
+			timerD3++;
+		}
+
+		if (timerD3 < 1000 and disparo3) {//de 0 a 1000
+			movEsferaE3 += movEsferaE3Offset * deltaTime;//incremento
+		}
+
+
+		//ZERO
+		//cuerpo
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(170.0f, -2.0f, 90.0f));
+		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelauxZ = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroCuerpo_M.RenderModel();//*/
+
+		//hombro derecho
+		model = modelauxZ;
+		model = glm::translate(model, glm::vec3(-0.265f, 3.125f, -0.05f));
+		if (inicio) {
+			model = glm::rotate(model, -rotHombroD * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		//model = glm::rotate(model, -90 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		modelauxHDerZ = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroHombroDer_M.RenderModel();//*/
+
+		//brazo derecho
+		model = modelauxHDerZ;
+		model = glm::translate(model, glm::vec3(-0.2f, -0.17625f, 0.0f));
+		modelauxHDerZ = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroBrazoDer_M.RenderModel();//*/
+
+		//hombro izq
+		model = modelauxZ;
+		model = glm::translate(model, glm::vec3(0.3245f, 3.10125f, -0.05f));
+		if (siguiente) {
+			model = glm::rotate(model, -rotHombroI * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		//model = glm::rotate(model, -90 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		modelauxHIzqZ = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroHombroIzq_M.RenderModel();//*/
+
+		//brazo izq
+		model = modelauxHIzqZ;
+		model = glm::translate(model, glm::vec3(0.15125f, -0.17625f, 0.025f));
+		modelauxHIzqZ = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroBrazoIzq_M.RenderModel();//*/
+
+		//codo izq
+		model = modelauxHIzqZ;
+		model = glm::translate(model, glm::vec3(0.0f, -0.4f, 0.0f));
+		if (siguiente) {
+			model = glm::rotate(model, -rotCodoI * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+			model = glm::rotate(model, -rotCodoI * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+		//model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		//model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelauxHIzqZ = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroCodoIzq_M.RenderModel();//*/
+
+		//mano izq
+		model = modelauxHIzqZ;
+		model = glm::translate(model, glm::vec3(0.02f, 0.01f, 0.0f));
+		//model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		//model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroManoIzq_M.RenderModel();//*/
+
+		//primera esfera de energia
+		model = modelauxHDerZ;
+		model = glm::translate(model, glm::vec3(0.01f, -0.8f, -0.04f));
+		if (disparo1) {
+			model = glm::translate(model, glm::vec3(0.0f, -movEsferaE - 0.0f, 0.0f));
+		}
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroEsferaE_M.RenderModel();//*/
+
+		//segunda esfera de energia
+		model = modelauxHDerZ;
+		model = glm::translate(model, glm::vec3(0.01f, -0.8f, -0.04f));
+		if (disparo1) {
+			model = glm::translate(model, glm::vec3(0.0f, -movEsferaE2 - 0.0f, 0.0f));
+		}
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroEsferaE_M.RenderModel();//*/
+
+		//tercera esfera de energia
+		model = modelauxHDerZ;
+		model = glm::translate(model, glm::vec3(0.01f, -0.8f, -0.04f));
+		if (disparo1) {
+			model = glm::translate(model, glm::vec3(0.0f, -movEsferaE3 - 0.0f, 0.0f));
+		}
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		ZeroEsferaE_M.RenderModel();//*/
 	
 
 		glDisable(GL_BLEND);
