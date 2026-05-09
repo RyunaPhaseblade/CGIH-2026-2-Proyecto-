@@ -1,0 +1,2 @@
+Aqui se encuentra la fortaleza del Dr. Willy, sus texturas y los modelos.
+Asi como un codigo main propuesto, se tomaron como referencia los archivos de la practica 9_2
