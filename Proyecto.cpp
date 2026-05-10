@@ -29,6 +29,8 @@ Textura Animada
 #include "Shader_light.h"
 #include "Camera.h"
 #include "CameraTP.h"
+#include "CameraA.h"
+#include "CameraF.h"
 #include "Texture.h"
 #include "Sphere.h"
 #include"Model.h"
@@ -91,6 +93,7 @@ float movEsferaE2Offset;
 float movEsferaE3;//para mover las esferas de energia
 float movEsferaE3Offset;
 
+
 Window mainWindow;
 std::vector<Mesh*> meshList;
 std::vector<Shader> shaderList;
@@ -102,6 +105,7 @@ CameraTP cameraTP;
 //Testuras
 /*Texture brickTexture;*/
 Texture pisoTexture;
+Texture testTexture;
 
 //Modelos
 Model Fortaleza_M;
@@ -113,7 +117,7 @@ Model EngranajeCono2_M;//Engranaje cono superior
 Model EngranajeF1_M;//Engranaje frotando derecho
 Model EngranajeF2_M;//Engranaje frotando izquierdo
 
-//Modelos de Zero
+//modelos de zero
 Model ZeroCuerpo_M;
 Model ZeroHombroDer_M;
 Model ZeroBrazoDer_M;
@@ -123,7 +127,11 @@ Model ZeroCodoIzq_M;
 Model ZeroManoIzq_M;
 Model ZeroEsferaE_M;
 
-/*Model Kitt_M;*/
+//Doom
+Model GoreNest;
+
+//Modelos luces
+Model Farola;
 
 
 Skybox skybox;
@@ -327,6 +335,8 @@ int main()
 
 	pisoTexture = Texture("Textures/piso.tga");
 	pisoTexture.LoadTextureA();
+	testTexture = Texture("Textures/blanco.png");	
+	testTexture.LoadTextureA();
 
 	//fortaleza
 	Fortaleza_M = Model();
@@ -365,14 +375,14 @@ int main()
 	ZeroEsferaE_M = Model();
 	ZeroEsferaE_M.LoadModel("Models/zero_esferaE.obj");
 
-	
-	/*
-	Model relojM;
-	*/
-	/*
-	reloj = Model();
-	reloj.LoadModel("Models/test.obj");
-	*/
+
+	//Doom Modelos
+	GoreNest = Model();
+	GoreNest.LoadModel("Models/gorenest.obj");
+
+	//Extras
+	Farola = Model();
+	Farola.LoadModel("Models/farola.obj");
 	
 
 	std::vector<std::string> skyboxFaces;
@@ -396,13 +406,19 @@ int main()
 	//contador de luces puntuales
 	unsigned int pointLightCount = 0;
 	//Declaración de primer luz puntual
-	/*
+	
 	pointLights[0] = PointLight(1.0f, 0.0f, 0.0f,
 		0.0f, 1.0f,
 		0.0f, 2.5f, 1.5f,
 		0.3f, 0.2f, 0.1f);
 	pointLightCount++;
-	*/
+	
+	pointLights[1] = PointLight(1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,
+		1.2f, 4.5f, -14.0f,
+		0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
 	unsigned int spotLightCount = 0;
 	/*
 	//linterna
@@ -434,17 +450,13 @@ int main()
 
 	glm::mat4 model(1.0);
 	glm::mat4 modelaux(1.0);
-
-	//modelos auxiliares de la fortaleza
-	glm::mat4 modelauxE(1.0);
 	glm::mat4 modelauxD(1.0);
+	glm::mat4 modelauxE(1.0);
 	glm::mat4 modelauxF(1.0);
-
 	//modelos auxiliares de zero
 	glm::mat4 modelauxZ(1.0);
 	glm::mat4 modelauxHDerZ(1.0);
 	glm::mat4 modelauxHIzqZ(1.0);
-
 	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec2 toffset = glm::vec2(0.0f, 0.0f);
 
@@ -458,6 +470,7 @@ int main()
 	rotEngranaje3Offset = 0.25f;
 	rotEngranaje4 = 0;
 	rotEngranaje4Offset = 0.2f;
+
 
 	//inicializacion de las variables que van hacer girar el hombro derecho de zero
 	rotHombroD = 0.0f;
@@ -479,14 +492,51 @@ int main()
 	movEsferaE3 = 0.0f;
 	movEsferaE3Offset = 0.4;
 
-	// Posiciones 
-	glm::vec3 posModelo = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	bool engineCameraTP = false;
+	//#####
+	//Dia/noche variables
+	float duracionCiclo = 90.0f; // Tiempo del ciclo
+	float dirZ = 0.0f;      
+
+	// Colores 
+	glm::vec3 MedioDia = glm::vec3(1.0f, 1.0f, 0.95f);
+	glm::vec3 Atardecer = glm::vec3(1.0f, 0.4f, 0.15f);
+	glm::vec3 Noche = glm::vec3(0.15f, 0.18f, 0.25f);
+
+	// Variables de estado de la luz
+	float ambientIntensity = 0.15f;
+	float diffuseIntensity = 0.10;
+	glm::vec3 colorSol = glm::vec3(0.0f);
+
+	//####
+	
+
+	// Posiciones 
+	glm::vec3 PersonajeMain = glm::vec3(0.0f, 0.0f, 0.0f);
+	float rotacionModelo = 0.0f; 
+
+	int tipoCamara = 0; // 0: Libre, 1: TP, 2: Aérea
+	bool f5Presionada = false;
+	bool TPV_C = false;
 	Camera cameraFP;
 	cameraFP = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -60.0f, 0.0f, 0.5f, 0.5f);
-	CameraTP cameraTP(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 20.0f, 10.0f, 0.5f);
 	
+
+	CameraTP cameraTP(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 20.0f, 10.0f, 0.5f);
+	// Ligamos la cámara a la dirección de memoria de PersonajeMain
+	cameraTP.establecerObjetivo(&PersonajeMain, 15.0f, 5.0f);
+
+	CameraA cameraA;
+	cameraA = CameraA(glm::vec3(0.0f, 75.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
+	
+	
+	CameraF cameraF = CameraF(glm::vec3(10.0f, 20.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	CameraF cameraF2 = CameraF(glm::vec3(-10.0f, 20.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+
+	//######
+	
+	//#####
 	////Loop mientras no se cierra la ventana
 	while (!mainWindow.getShouldClose())
 	{
@@ -496,18 +546,65 @@ int main()
 		lastTime = now;
 
 		glfwPollEvents();
-		camera.keyControl(mainWindow.getsKeys(), deltaTime);
-		camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
+		glm::mat4 vistaActual;
+		glm::vec3 posOjo, dirOjo;
 
-		/*
-		if (mainWindow.getCam()) {
-			cameraTP.keyControl(mainWindow.getsKeys(), deltaTime);
+		// Camaras
+		tipoCamara = mainWindow.getCam(); 
+
+		if (tipoCamara == 1) { // TERCERA PERSONA
 			cameraTP.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
-		} else {
-			cameraFP.keyControl(mainWindow.getsKeys(), deltaTime);
-			cameraFP.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
-		}*/
+
+			glm::vec3 camFront = cameraTP.getCameraDirection();
+			glm::vec3 walkForward = glm::normalize(glm::vec3(camFront.x, 0.0f, camFront.z));
+			glm::vec3 walkRight = glm::normalize(glm::cross(walkForward, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+			glm::vec3 direccionMovimiento(0.0f);
+			float velocidadModelo = 1.0f * deltaTime;
+
+			// 
+			if (mainWindow.getsKeys()[GLFW_KEY_W]) direccionMovimiento += walkForward;
+			if (mainWindow.getsKeys()[GLFW_KEY_S]) direccionMovimiento -= walkForward;
+			if (mainWindow.getsKeys()[GLFW_KEY_A]) direccionMovimiento -= walkRight;
+			if (mainWindow.getsKeys()[GLFW_KEY_D]) direccionMovimiento += walkRight;
+
+			// 
+			if (glm::length(direccionMovimiento) > 0.0f) {
+				direccionMovimiento = glm::normalize(direccionMovimiento);
+				PersonajeMain += direccionMovimiento * velocidadModelo;
+				rotacionModelo = glm::degrees(atan2(direccionMovimiento.x, direccionMovimiento.z));
+			}
+
+			vistaActual = cameraTP.calculateViewMatrix();
+			posOjo = cameraTP.getCameraPosition();
+			dirOjo = cameraTP.getCameraDirection();
+		}
+		else if (tipoCamara == 2) { // AÉREA (NUEVA)
+			cameraA.keyControl(mainWindow.getsKeys(), deltaTime);
+			// mouseControl no hace nada por definición en CameraA
+			vistaActual = cameraA.calculateViewMatrix();
+			posOjo = cameraA.getCameraPosition();
+			dirOjo = cameraA.getCameraDirection();
+		}
+		else if (tipoCamara == 3) {
+			vistaActual = cameraF.calculateViewMatrix();
+			posOjo = cameraF.getCameraPosition();
+			dirOjo = cameraF.getCameraDirection();
+		}
+		else if (tipoCamara == 4) {
+			vistaActual = cameraF2.calculateViewMatrix();
+			posOjo = cameraF2.getCameraPosition();
+			dirOjo = cameraF2.getCameraDirection();
+		}
+		else { 
+			camera.keyControl(mainWindow.getsKeys(), deltaTime);
+			camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
+			vistaActual = camera.calculateViewMatrix();
+			posOjo = camera.getCameraPosition();
+			dirOjo = camera.getCameraDirection();
+		}
 		
+
 		//para el incremento en las rotaciones de los engranajes
 		rotEngranaje += rotEngranajeOffset * deltaTime;
 		rotEngranaje2 += rotEngranaje2Offset * deltaTime;
@@ -531,62 +628,62 @@ int main()
 		uniformShininess = shaderList[0].GetShininessLocation();
 
 		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(camera.calculateViewMatrix()));
-		glUniform3f(uniformEyePosition, camera.getCameraPosition().x, camera.getCameraPosition().y, camera.getCameraPosition().z);
+		glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(vistaActual));
+		glUniform3f(uniformEyePosition, posOjo.x, posOjo.y, posOjo.z);
+
 
 		// luz ligada a la cámara de tipo flash
 		lowerLight = camera.getCameraPosition();
 		lowerLight.y -= 0.3f;
 		spotLights[0].SetFlash(lowerLight, camera.getCameraDirection());
+		///#####
 
-		// --- LÓGICA DE CICLO DÍA/NOCHE ---
-		float tiempoActual = glfwGetTime();
-		// Progreso de 0.0 a 1.0 cada 90 segundos
+
+		//######
+		// Ciclo Dia Noche
+		// Cálculo de tiempo y posición del sol
+		float tiempoActual = (float)glfwGetTime();
 		float progreso = fmod(tiempoActual, duracionCiclo) / duracionCiclo;
-
-		// Convertir progreso a radianes (360 grados)
 		float anguloSol = progreso * 2.0f * 3.14159265f;
 
-		// El sol se mueve en el plano XY (atardece en X, sube en Y)
 		float dirX = sin(anguloSol);
-		float dirY = cos(anguloSol); // Positivo = Día, Negativo = Noche
-		float dirZ = -1.0f;          // Mantener ligera inclinación para sombras interesantes
+		float dirY = cos(anguloSol);
 
-		// Variables para los nuevos estados de la luz
-		float ambientIntensity, diffuseIntensity;
-		glm::vec3 colorSol;
+		// Transiciones
+		float factorDia = glm::smoothstep(-0.2f, 0.3f, dirY);
+		float facAt = glm::smoothstep(0.4f, -0.1f, std::abs(dirY));
+
+		// Mezcla dinámica 
+		glm::vec3 colorAtardecer = glm::mix(MedioDia, Atardecer, facAt);
+		colorSol = glm::mix(Noche, colorAtardecer, factorDia);
 
 		if (dirY > 0) {
-			// ESTADO: DÍA (Sol sobre el horizonte)
-			// El color varía de naranja (amanecer) a blanco (cenit)
-			float factorAmanecer = std::min(1.0f, dirY * 5.0f); // Transición rápida al salir el sol
-			colorSol = glm::mix(glm::vec3(1.0f, 0.4f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f), factorAmanecer);
-
-			ambientIntensity = 0.2f + (dirY * 0.3f); // Más luz ambiente al mediodía
-			diffuseIntensity = dirY * 0.8f;          // Luz directa fuerte
+			diffuseIntensity = std::max(0.10f, dirY * 0.8f);
 		}
 		else {
-			// ESTADO: NOCHE (Sol bajo el horizonte)
-			colorSol = glm::vec3(0.1f, 0.1f, 0.2f);  // Tono azulado nocturno
-			ambientIntensity = 0.05f;                // Luz mínima para ver la Fortaleza
-			diffuseIntensity = 0.0f;                 // No hay luz directa del sol
+			diffuseIntensity = 0.10f;
 		}
 
-		// Como no tienes SetDirectionalLight, creamos un objeto nuevo en cada iteración 
-		// o actualizamos el existente si tu clase lo permite. 
-		// La forma más segura con tu código actual:
-		mainLight = DirectionalLight(colorSol.r, colorSol.g, colorSol.b,
-			ambientIntensity, diffuseIntensity,
-			dirX, dirY, dirZ);
+		mainLight = DirectionalLight(
+			colorSol.r, colorSol.g, colorSol.b,
+			ambientIntensity,
+			diffuseIntensity,
+			dirX, dirY, dirZ
+		);
 
-		// --- FIN LÓGICA DÍA/NOCHE ---
+		//#####
 
-		// Luego sigues con el envío al shader que ya tenías:
+		
 		shaderList[0].SetDirectionalLight(&mainLight);
-
-		//información al shader de fuentes de iluminación
-		shaderList[0].SetDirectionalLight(&mainLight);
-		shaderList[0].SetPointLights(pointLights, pointLightCount);
+		PointLight lucesActivas[MAX_POINT_LIGHTS];
+		unsigned int conteoActivas = 0;
+		lucesActivas[conteoActivas] = pointLights[0];
+		conteoActivas++;
+		if (dirY<0) {
+			lucesActivas[conteoActivas] = pointLights[1];
+			conteoActivas++;
+		}
+		shaderList[0].SetPointLights(lucesActivas, conteoActivas);
 		shaderList[0].SetSpotLights(spotLights, spotLightCount);
 
 
@@ -607,11 +704,30 @@ int main()
 
 		meshList[2]->RenderMesh();
 
+
+		//#####
 		model = glm::mat4(1.0);
-		model = glm::translate(model, posModelo);
+		model = glm::translate(model, PersonajeMain); 
+		model = glm::rotate(model, glm::radians(rotacionModelo), glm::vec3(0.0f, 1.0f, 0.0f)); 
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		testTexture.UseTexture();
 		meshList[0]->RenderMesh();
 
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(0.0f, -2.0f, 15.0f));
+		model = glm::scale(model, glm::vec3(0.07f, 0.085f, 0.085f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		GoreNest.RenderModel();
+
+		//Repetir cuantas veces sea necesario, para dar mas iluminacion por la noche.
+		model = glm::mat4(1.0);
+		model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Farola.RenderModel();
+		//####
+		// 
+		// 
 		//FORTALEZA DEL DR. WILLY
 		//el esqueleto: muralla, torres, torres con cañon, calavera, mansion, cono superior
 		model = glm::mat4(1.0);
@@ -1093,7 +1209,6 @@ int main()
 		}
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		ZeroEsferaE_M.RenderModel();//*/
-	
 
 		glDisable(GL_BLEND);
 

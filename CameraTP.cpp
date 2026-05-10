@@ -70,6 +70,21 @@ void CameraTP::mouseControl(GLfloat xChange, GLfloat yChange)
 
 glm::mat4 CameraTP::calculateViewMatrix()
 {
+    if (TPV && posicionMain)
+    {
+        // Calcular la posición de la cámara en una esfera alrededor del objetivo
+        // usando coordenadas esféricas basadas en yaw y pitch
+        position.x = posicionMain->x - distanciaP * cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        position.y = posicionMain->y + alturaP - distanciaP * sin(glm::radians(pitch));
+        position.z = posicionMain->z - distanciaP * sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+
+        // La cámara siempre debe mirar al objetivo
+        front = glm::normalize(*posicionMain - position);   
+        // Recalcular vectores ortogonales
+        right = glm::normalize(glm::cross(front, worldUp));
+        up = glm::normalize(glm::cross(right, front));
+    }
+
     return glm::lookAt(position, position + front, up);
 }
 

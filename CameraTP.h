@@ -20,6 +20,13 @@ public:
 	glm::vec3 getCameraDirection();
 	glm::mat4 calculateViewMatrix();
 
+	void establecerObjetivo(glm::vec3* objetivo, float distancia, float altura) {
+		posicionMain  = objetivo;
+		distanciaP = distancia;
+		alturaP = altura;
+		TPV = true;
+	}
+
 	~CameraTP();
 
 private:
@@ -34,6 +41,11 @@ private:
 
 	GLfloat moveSpeed;
 	GLfloat turnSpeed;
+
+	glm::vec3* posicionMain;
+	float distanciaP;
+	float alturaP;
+	bool TPV;
 
 	void update();
 };
