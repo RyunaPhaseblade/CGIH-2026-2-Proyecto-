@@ -125,10 +125,10 @@ void Window::ManejaTeclado(GLFWwindow* window, int key, int code, int action, in
 
 	if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
 	{
-		if(theWindow->camara == false)
-			theWindow->camara = true;
+		if(theWindow->camara <= 4)
+			theWindow->camara += 1;
 		else
-			theWindow->camara = false;
+			theWindow->camara = 0;
 	}
 
 	if (key >= 0 && key < 1024)

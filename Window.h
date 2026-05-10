@@ -16,7 +16,7 @@ public:
 	GLfloat getmuevex() { return muevex; }
 	GLfloat getarticulacion1() { return articulacion1; }
 	GLboolean getfuego() { return fuego; }
-	GLboolean getCam() { return camara; }
+	int getCam() { return camara; }
 	bool getShouldClose() {
 		return  glfwWindowShouldClose(mainWindow);
 	}
@@ -37,7 +37,8 @@ private:
 	GLfloat muevex;
 	GLfloat rotax, rotay, rotaz, articulacion1;
 	GLfloat engranemovadicionalX, objetomovadicionalX;
-	GLboolean camara = true;
+	//GLboolean camara = true;
+	int camara = 0; 
 	GLboolean fuego =  false;
 	bool mouseFirstMoved;
 	static void ManejaTeclado(GLFWwindow* window, int key, int code, int action, int mode);
