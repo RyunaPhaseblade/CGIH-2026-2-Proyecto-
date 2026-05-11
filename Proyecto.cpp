@@ -78,6 +78,7 @@ float timerD3 = 0.0f;
 bool disparo1 = 0;
 bool disparo2 = 0;
 bool disparo3 = 0;
+bool nuevoDisparo = 0;
 
 //variables para las rotaciones de zero y sus incrementos
 float rotHombroD;//para el hombro derecho
@@ -93,7 +94,26 @@ float movEsferaE2Offset;
 float movEsferaE3;//para mover las esferas de energia
 float movEsferaE3Offset;
 
+//variables para la animacion de mega man
+float timerM = 0.0f;
+bool mega = 0;
+bool mega1 = 0;
+bool cambio = 0;
+bool mega2 = 0;
+bool cambioI = 0;
 
+//variables para las rotaciones de mega y sus incrementos
+float rotHombroDM;//para el hombro derecho
+float rotHombroDMOffset;
+float rotHombroDM1;//para el hombro derecho
+float rotHombroDM1Offset;
+float rotHombroDM2;//para el hombro derecho
+float rotHombroDM2Offset;
+float rotHombroDM3;//para el hombro derecho
+float rotHombroDM3Offset;
+
+float rotHombroIM;//para el hombro izq
+float rotHombroIMOffset;
 Window mainWindow;
 std::vector<Mesh*> meshList;
 std::vector<Shader> shaderList;
@@ -126,6 +146,11 @@ Model ZeroBrazoIzq_M;
 Model ZeroCodoIzq_M;
 Model ZeroManoIzq_M;
 Model ZeroEsferaE_M;
+
+//Modelos de Megaman
+Model MegaManCuerpo_M;
+Model MegaManBrazoDer_M;
+Model MegaManBrazoIzq_M;
 
 //Doom
 Model GoreNest;
@@ -375,6 +400,14 @@ int main()
 	ZeroEsferaE_M = Model();
 	ZeroEsferaE_M.LoadModel("Models/zero_esferaE.obj");
 
+	//Mega Man
+	MegaManCuerpo_M = Model();
+	MegaManCuerpo_M.LoadModel("Models/megaman_cuerpo.obj");
+	MegaManBrazoDer_M = Model();
+	MegaManBrazoDer_M.LoadModel("Models/megaman_brazoDer.obj");
+	MegaManBrazoIzq_M = Model();
+	MegaManBrazoIzq_M.LoadModel("Models/megaman_brazoIzq.obj");
+
 
 	//Doom Modelos
 	GoreNest = Model();
@@ -450,6 +483,7 @@ int main()
 
 	glm::mat4 model(1.0);
 	glm::mat4 modelaux(1.0);
+	//modelos auxiliares de la fortaleza
 	glm::mat4 modelauxD(1.0);
 	glm::mat4 modelauxE(1.0);
 	glm::mat4 modelauxF(1.0);
@@ -457,6 +491,10 @@ int main()
 	glm::mat4 modelauxZ(1.0);
 	glm::mat4 modelauxHDerZ(1.0);
 	glm::mat4 modelauxHIzqZ(1.0);
+
+	//modelos auxiliares de mega man
+	glm::mat4 modelauxM(1.0);
+
 	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec2 toffset = glm::vec2(0.0f, 0.0f);
 
@@ -491,6 +529,24 @@ int main()
 	movEsferaE2Offset = 0.4;
 	movEsferaE3 = 0.0f;
 	movEsferaE3Offset = 0.4;
+
+
+	//inicializacion de las variables que van hacer girar el hombro derecho de mega
+	rotHombroDM = 0.0f;
+	rotHombroDMOffset = 2.5;
+
+	rotHombroDM1 = 0.0f;
+	rotHombroDM1Offset = 0.27;
+
+	rotHombroDM2 = 0.0f;
+	rotHombroDM2Offset = 1.25;
+
+	rotHombroDM3 = 0.0f;
+	rotHombroDM3Offset = 1.25;
+
+	//inicializacion de las variables que van hacer girar el hombro izquierdo de mega
+	rotHombroIM = 0.0f;
+	rotHombroIMOffset = 0.15;
 
 
 	//#####
@@ -1015,13 +1071,14 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		EngranajeF2_M.RenderModel();//*/
 
+		//PARA LA ANIMACION DE ZERO
 		//para el inicio de la animacion del hombro derecho de zero
-		if (mainWindow.getsKeys()[GLFW_KEY_I]) {//cuando se presione la tecla I
+		if (mainWindow.getsKeys()[GLFW_KEY_Z]) {//cuando se presione la tecla Z
 			inicio = 1;//bandera
 		}
 
 		//para el reseteo de la animacion en general
-		if (mainWindow.getsKeys()[GLFW_KEY_R]) {//cuando se presione la tecla R
+		if (mainWindow.getsKeys()[GLFW_KEY_X]) {//cuando se presione la tecla X
 			//para el hombro der
 			inicio = 0;
 			timerEspera = 0;
@@ -1035,6 +1092,20 @@ int main()
 
 			//para la esfera de energia
 			disparo1 = 0;
+			disparo2 = 0;
+			disparo3 = 0;
+			timerD = 0;
+			timerD2 = 0;
+			timerD3 = 0;
+			movEsferaE = 0;
+			movEsferaE2 = 0;
+			movEsferaE3 = 0;
+			nuevoDisparo = 0;
+		}
+
+		//para que se repita las veces que sea los tres disparos
+		if (mainWindow.getsKeys()[GLFW_KEY_C]) {//cuando se presione la tecla C
+			disparo1 = 1;
 			disparo2 = 0;
 			disparo3 = 0;
 			timerD = 0;
@@ -1076,17 +1147,18 @@ int main()
 			}
 			else {
 				disparo1 = 1;
+				nuevoDisparo = 1;
 				//printf("\ntimerEspera %f", timerEspera);
 			}//*/
 		}
 
 		//PARA LAS ESFERAS DE ENERGIA
 		//primera esfera de energia
-		if (disparo1) {
+		if (disparo1 and nuevoDisparo) {
 			timerD++;
 		}
 
-		if (timerD < 1000 and disparo1) {//de 0 a 1000
+		if (timerD < 1000 and nuevoDisparo) {//de 0 a 1000
 			movEsferaE += movEsferaEOffset * deltaTime;//incremento
 		}
 
@@ -1209,6 +1281,127 @@ int main()
 		}
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		ZeroEsferaE_M.RenderModel();//*/
+
+
+		//PARA LA ANIMACION DE MEGA MAN
+		//para el inicio de la animacion
+		if (mainWindow.getsKeys()[GLFW_KEY_M]) {//cuando se presione la tecla M
+			mega = 1;//bandera
+		}
+
+		//para el reseteo de la animacion en general
+		if (mainWindow.getsKeys()[GLFW_KEY_N]) {//cuando se presione la tecla N
+			//para el hombro derecho
+			mega = 0;
+			timerM = 0;
+			rotHombroDM = 0;
+			rotHombroDM1 = 0;
+			rotHombroDM2 = 0;
+			mega1 = 0;
+			rotHombroDM3 = 0;
+
+			//para el hombro izquierdo
+			mega2 = 0;
+			rotHombroIM = 0;
+
+		}
+
+		if (mega) {
+			timerM++;
+		}
+
+		if (timerM < 450 and mega) {//de 0 a 600
+			if (rotHombroDM < 180) {//para que el limite de la rotacion sea 90º
+				rotHombroDM += rotHombroDMOffset * deltaTime;//incremento
+				if (rotHombroDM1 < 20) {
+					rotHombroDM1 += rotHombroDM1Offset * deltaTime;
+				}
+				if (rotHombroDM2 < 90) {
+					rotHombroDM2 += rotHombroDM2Offset * deltaTime;
+				}
+			}
+			else {
+				//siguiente = 1;
+				//printf("\ntimerEspera %f", timerM);
+			}//*/
+		}
+
+		if (timerM > 300) {
+			mega1 = 1;
+			mega2 = 1;
+		}
+
+		if (mega1) {
+			if (rotHombroDM3 < 50 and !cambio) {
+				rotHombroDM3 += rotHombroDM3Offset * deltaTime;
+			}
+			else {
+				cambio = 1;
+			}
+
+			if (rotHombroDM3 > 5 and cambio) {
+				rotHombroDM3 -= rotHombroDM3Offset * deltaTime;
+			}
+			else {
+				cambio = 0;
+			}
+		}
+
+		if (mega2) {
+			if (rotHombroIM < 5 and !cambioI) {
+				rotHombroIM += rotHombroIMOffset * deltaTime;
+			}
+			else {
+				cambioI = 1;
+			}
+			if (rotHombroIM > 0 and cambioI) {
+				rotHombroIM -= rotHombroIMOffset * deltaTime;
+			}
+			else {
+				cambioI = 0;
+			}
+		}
+
+		//MEGAMAN
+		//cuerpo
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(150.0f, -2.0f, 90.0f));
+		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		if (mega2) {
+			model = glm::rotate(model, rotHombroIM * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+		modelauxM = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MegaManCuerpo_M.RenderModel();
+
+		//brazo derecho
+		model = modelauxM;
+		model = glm::translate(model, glm::vec3(-0.3762f, 2.7191f, -0.1178f));
+		model = glm::rotate(model, -20 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));//inclinacion inicial
+		if (mega) {
+			model = glm::rotate(model, -rotHombroDM * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota el brazo para que este arriba
+			model = glm::rotate(model, -rotHombroDM1 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));//reacomoda el brazo de la rotacion inicial
+			model = glm::rotate(model, rotHombroDM2 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));//gira el brazo, para que la palma este de frente
+		}
+		//model = glm::rotate(model, -180 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota el brazo para que este arriba
+		//model = glm::rotate(model, -20 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));//reacomoda el brazo de la rotacion inicial
+		//model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));//gira el brazo, para que la palma este de frente
+		if (mega1) {
+			model = glm::rotate(model, rotHombroDM3 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota la mano para hacer el saludo, el limite
+		}
+		//model = glm::rotate(model, 45 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota la mano para hacer el saludo, el limite
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MegaManBrazoDer_M.RenderModel();
+
+		//brazo izquierdo
+		model = modelauxM;
+		model = glm::translate(model, glm::vec3(0.3762f, 2.7191f, -0.1178f));
+		model = glm::rotate(model, 20 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		if (mega2) {
+			model = glm::rotate(model, rotHombroIM * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MegaManBrazoIzq_M.RenderModel();
 
 		glDisable(GL_BLEND);
 
