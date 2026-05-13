@@ -1,12 +1,3 @@
-/*
-Animación:
-Sesión 1:
-Simple o básica:Por banderas y condicionales (más de 1 transformación geométrica se ve modificada
-Sesión 2
-Compleja: Por medio de funciones y algoritmos.
-Textura Animada
-*/
-//para cargar imagen
 #define STB_IMAGE_IMPLEMENTATION
 
 #include <stdio.h>
@@ -21,8 +12,6 @@ Textura Animada
 #include <glm.hpp>
 #include <gtc\matrix_transform.hpp>
 #include <gtc\type_ptr.hpp>
-//para probar el importer
-//#include<assimp/Importer.hpp>
 
 #include "Window.h"
 #include "Mesh.h"
@@ -36,7 +25,7 @@ Textura Animada
 #include"Model.h"
 #include "Skybox.h"
 
-//para iluminación
+//para iluminaciï¿½n
 #include "CommonValues.h"
 #include "DirectionalLight.h"
 #include "PointLight.h"
@@ -44,13 +33,25 @@ Textura Animada
 #include "Material.h"
 const float toRadians = 3.14159265f / 180.0f;
 
-//variables para animación
+//variables para animaciï¿½n
 /*bool aelGira = false;*/
 // 90 segundos para un ciclo completo
 const float duracionCiclo = 60.0f;
 
 
-//Camaras
+// Varibales jake
+float posXJake;
+float posZJake;
+float rotJake;
+float movPiernas; // Controla la oscilaciï¿½n de piernas y brazos
+//variables para la animacion del tren
+
+int estadoTren;
+float trenPosX;
+float trenPosZ;
+float trenRotY;
+float anguloCurva;
+float rotLlantasTren;
 
 //para que giren los engranajes
 float rotEngranaje;
@@ -144,14 +145,14 @@ std::vector<Mesh*> meshList;
 std::vector<Shader> shaderList;
 
 //Variables para Cacodemonio
-glm::vec3 cacoPos = glm::vec3(0.0f, 5.0f, 0.0f);   
-glm::vec3 cacoTarget = glm::vec3(5.0f, 5.0f, 5.0f); 
-float cacoVel = 0.05f;         
-float cacoAngle = 0.0f;        
-float timerCacoY = 0.0f;       
+glm::vec3 cacoPos = glm::vec3(0.0f, 5.0f, 0.0f);
+glm::vec3 cacoTarget = glm::vec3(5.0f, 5.0f, 5.0f);
+float cacoVel = 0.05f;
+float cacoAngle = 0.0f;
+float timerCacoY = 0.0f;
 float intervaloCacoY = 5.0f;
-float cacoPitch = 0.0f;        
-float targetPitch = 0.0f;      
+float cacoPitch = 0.0f;
+float targetPitch = 0.0f;
 
 Camera camera;
 CameraTP cameraTP;
@@ -221,10 +222,29 @@ Model BMO_M;
 
 //Model jake el perro
 Model jake_M;
+Model jake_PieIZQ_M;
+Model jake_PieDER_M;
+Model jake_BrazoIZQ_M;
+Model jake_BrazoDER_M;
+
 //Model vias
+Model viascurva_M;
 Model vias_M;
+
+
 //modelo tren
 Model tren_M;
+Model tren_Cabina_M;
+Model tren_vagon1_M;
+Model tren_vagon2_M;
+Model tren_vagon3_M;
+Model llanta_cabina_izq_M;
+Model llanta_cabina_der_M;
+Model llnata_cabina_DER_GRA_M;
+Model llnata_cabina_IZQ_GRA_M;
+Model llanta_vagon_izq_M;
+Model llanta_vagon_der_M;
+
 
 //Modelos extras
 Model arboles1;
@@ -259,7 +279,7 @@ static const char* fShader = "shaders/shader_light.frag";
 
 
 
-//cálculo del promedio de las normales para sombreado de Phong
+//cï¿½lculo del promedio de las normales para sombreado de Phong
 void calcAverageNormals(unsigned int* indices, unsigned int indiceCount, GLfloat* vertices, unsigned int verticeCount,
 	unsigned int vLength, unsigned int normalOffset)
 {
@@ -419,7 +439,29 @@ void CreateShaders()
 	shaderList.push_back(*shader1);
 }
 
-
+void CalcularPosicionTren(float distancia, float& posX, float& posZ, float& rotY) {
+	if (distancia < 200.0f) {
+		// 1. RECTA INICIAL (Desde X=80 hasta X=-120)
+		posX = 80.0f - distancia;
+		posZ = -120.0f;
+		rotY = -90.0f;
+	}
+	else if (distancia < 215.7f) {
+		// 2. CURVA (Radio de 10 unidades)
+		float distCurva = distancia - 200.0f;
+		float anguloRad = distCurva / 10.0f; // S = r * theta
+		rotY = -90.0f + (anguloRad * 180.0f / 3.14159265f);
+		posX = -130.0f + (10.0f * cos(anguloRad));
+		posZ = -120.0f + (10.0f * sin(anguloRad));
+	}
+	else {
+		// 3. RECTA FINAL (Desde Z=-110 hacia adelante)
+		float distRecta2 = distancia - 215.7f;
+		posX = -130.0f;
+		posZ = -110.0f + distRecta2;
+		rotY = 0.0f;
+	}
+}
 
 
 int main()
@@ -493,15 +535,54 @@ int main()
 
 	//jake el perro
 	jake_M = Model();
-	jake_M.LoadModel("Models/jake_M.obj");
+	jake_M.LoadModel("Models/Jake_M.obj");
+	jake_PieIZQ_M = Model();
+	jake_PieIZQ_M.LoadModel("Models/Jake_PieIZQ_M.obj");
+	jake_PieDER_M = Model();
+	jake_PieDER_M.LoadModel("Models/Jake_PieDRE_M.obj");
+	jake_BrazoIZQ_M = Model();
+	jake_BrazoIZQ_M.LoadModel("Models/Jake_BrazoIZQ_M.obj");
+	jake_BrazoDER_M = Model();
+	jake_BrazoDER_M.LoadModel("Models/Jake_BrazoDER_M.obj");
 
 	//vias
 	vias_M = Model();
 	vias_M.LoadModel("Models/vias.obj");
 
-	//tren
-	tren_M = Model();
-	tren_M.LoadModel("Models/tren.obj");
+	viascurva_M = Model();
+	viascurva_M.LoadModel("Models/Viacurva.obj");
+
+	//tren con jerarquia para animacion
+	tren_Cabina_M = Model();
+	tren_Cabina_M.LoadModel("Models/tren-cabina.obj");
+
+
+	tren_vagon1_M = Model();
+	tren_vagon1_M.LoadModel("Models/vagon1.obj");
+
+	tren_vagon2_M = Model();
+	tren_vagon2_M.LoadModel("Models/vagon2.obj");
+
+	tren_vagon3_M = Model();
+	tren_vagon3_M.LoadModel("Models/vagon3.obj");
+
+	llanta_cabina_izq_M = Model();
+	llanta_cabina_izq_M.LoadModel("Models/llanta_cabinaIzquierda.obj");
+
+	llanta_cabina_der_M = Model();
+	llanta_cabina_der_M.LoadModel("Models/llanta_cabinaDerecha.obj");
+
+	llnata_cabina_DER_GRA_M = Model();
+	llnata_cabina_DER_GRA_M.LoadModel("Models/llanta_cabinaDerecha_Grande.obj");
+
+	llnata_cabina_IZQ_GRA_M = Model();
+	llnata_cabina_IZQ_GRA_M.LoadModel("Models/llanta_cabinaIZQ_Grande.obj");
+
+	llanta_vagon_izq_M = Model();
+	llanta_vagon_izq_M.LoadModel("Models/llanta_vagonIZQ.obj");
+
+	llanta_vagon_der_M = Model();
+	llanta_vagon_der_M.LoadModel("Models/llanta_vagonDER.obj");
 
 	//Mega Man
 	MegaManCuerpo_M = Model();
@@ -568,19 +649,19 @@ int main()
 	Material_opaco = Material(0.3f, 4);
 
 
-	//luz direccional, sólo 1 y siempre debe de existir
+	//luz direccional, sï¿½lo 1 y siempre debe de existir
 	mainLight = DirectionalLight(1.0f, 1.0f, 1.0f,
 		0.3f, 0.3f,
 		0.0f, 0.0f, -1.0f);
 	//contador de luces puntuales
 	unsigned int pointLightCount = 0;
-	//Declaración de primer luz puntual
+	//Declaraciï¿½n de primer luz puntual
 
 	//GoldNest
 	pointLights[0] = PointLight(
-		1.0f, 0.2f, 0.0f,       
-		10.0f, 15.0f,          
-		-100.0f, 23.0f, 35.0f,     
+		1.0f, 0.2f, 0.0f,
+		10.0f, 15.0f,
+		-100.0f, 23.0f, 35.0f,
 		1.0f, 0.1f, 0.16f
 	);
 
@@ -725,6 +806,24 @@ int main()
 	rotCodoIE = 0.0f;
 	rotCodoIEOffset = 1.0;
 
+	//tren
+
+	estadoTren = 0;           // 0: Recta X, 1: Curva, 2: Recta Z
+	trenPosX = 80.0f;       // Inicia en la Vï¿½a 4
+	trenPosZ = -120.0f;     // Alineado a la vï¿½a X
+	trenRotY = -90.0f;       // Rotaciï¿½n inicial mirando hacia adelante
+	anguloCurva = 0.0f;     // Para hacer el giro suave
+	rotLlantasTren = 0.0f;
+
+	float avanceTren = 0.0f;       // Distancia recorrida por la cabina
+	float rotLlantasTren = 0.0f;   // Giro visual de las ruedas	
+
+	// Cerca de la lï¿½nea 60 de tu Proyecto.cpp
+	float posXJake = 0.0f;
+	float posZJake = 0.0f;
+	float rotJake = 0.0f;
+	float movPiernas = 0.0f;
+
 
 	//#####
 	//Dia/noche variables
@@ -745,11 +844,11 @@ int main()
 
 
 	// Posiciones 
-	glm::vec3 PersonajeMain = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3 PersonajeMain = glm::vec3(0.0f, 0.0f, 20.0f);
 	float rotacionModelo = 0.0f;
-	glm::vec3 posModelo = glm::vec3(0.0f, 0.0f, 0.0f);	
+	glm::vec3 posModelo = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	int tipoCamara = 0; // 0: Libre, 1: TP, 2: Aérea
+	int tipoCamara = 0; // 0: Libre, 1: TP, 2: Aï¿½rea
 	bool f5Presionada = false;
 	bool TPV_C = false;
 	Camera cameraFP;
@@ -757,15 +856,16 @@ int main()
 
 
 	CameraTP cameraTP(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 20.0f, 10.0f, 0.5f);
-	// Ligamos la cámara a la dirección de memoria de PersonajeMain
-	cameraTP.establecerObjetivo(&PersonajeMain, 15.0f, 5.0f);
+	// Ligamos la cï¿½mara a la direcciï¿½n de memoria de PersonajeMain
+	cameraTP.establecerObjetivo(&PersonajeMain, 25.0f, 5.0f);
 
 	CameraA cameraA;
 	cameraA = CameraA(glm::vec3(0.0f, 75.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
 
 
-	CameraF cameraF = CameraF(glm::vec3(10.0f, 20.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	CameraF cameraF2 = CameraF(glm::vec3(-10.0f, 20.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	CameraF cameraF = CameraF(glm::vec3(60.0f, 20.0f, 90.0f), glm::vec3(100.0f, 0.0f, 100.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	CameraF cameraF2 = CameraF(glm::vec3(-20.0f, 20.0f, -20.0f), glm::vec3(0.0f, 40.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	CameraF cameraF3 = CameraF(glm::vec3(-100.0f, 5.0f, 70.0f), glm::vec3(-100.0f, 10.0f, 150.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 
 	//######
@@ -807,15 +907,16 @@ int main()
 				direccionMovimiento = glm::normalize(direccionMovimiento);
 				PersonajeMain += direccionMovimiento * velocidadModelo;
 				rotacionModelo = glm::degrees(atan2(direccionMovimiento.x, direccionMovimiento.z));
+				movPiernas += 15.0f * deltaTime;
 			}
 
 			vistaActual = cameraTP.calculateViewMatrix();
 			posOjo = cameraTP.getCameraPosition();
 			dirOjo = cameraTP.getCameraDirection();
 		}
-		else if (tipoCamara == 2) { // AÉREA (NUEVA)
+		else if (tipoCamara == 2) { // Aï¿½REA (NUEVA)
 			cameraA.keyControl(mainWindow.getsKeys(), deltaTime);
-			// mouseControl no hace nada por definición en CameraA
+			// mouseControl no hace nada por definiciï¿½n en CameraA
 			vistaActual = cameraA.calculateViewMatrix();
 			posOjo = cameraA.getCameraPosition();
 			dirOjo = cameraA.getCameraDirection();
@@ -829,6 +930,11 @@ int main()
 			vistaActual = cameraF2.calculateViewMatrix();
 			posOjo = cameraF2.getCameraPosition();
 			dirOjo = cameraF2.getCameraDirection();
+		}
+		else if (tipoCamara == 5) {
+			vistaActual = cameraF3.calculateViewMatrix();
+			posOjo = cameraF3.getCameraPosition();
+			dirOjo = cameraF3.getCameraDirection();
 		}
 		else {
 			camera.keyControl(mainWindow.getsKeys(), deltaTime);
@@ -857,7 +963,7 @@ int main()
 		uniformColor = shaderList[0].getColorLocation();
 		uniformTextureOffset = shaderList[0].getOffsetLocation();
 
-		//información en el shader de intensidad especular y brillo
+		//informaciï¿½n en el shader de intensidad especular y brillo
 		uniformSpecularIntensity = shaderList[0].GetSpecularIntensityLocation();
 		uniformShininess = shaderList[0].GetShininessLocation();
 
@@ -866,7 +972,7 @@ int main()
 		glUniform3f(uniformEyePosition, posOjo.x, posOjo.y, posOjo.z);
 
 
-		// luz ligada a la cámara de tipo flash
+		// luz ligada a la cï¿½mara de tipo flash
 		lowerLight = camera.getCameraPosition();
 		lowerLight.y -= 0.3f;
 		spotLights[0].SetFlash(lowerLight, camera.getCameraDirection());
@@ -875,7 +981,7 @@ int main()
 
 		//######
 		// Ciclo Dia Noche
-		// Cálculo de tiempo y posición del sol
+		// Cï¿½lculo de tiempo y posiciï¿½n del sol
 		float tiempoActual = (float)glfwGetTime();
 		float progreso = fmod(tiempoActual, duracionCiclo) / duracionCiclo;
 		float anguloSol = progreso * 2.0f * 3.14159265f;
@@ -887,7 +993,7 @@ int main()
 		float factorDia = glm::smoothstep(-0.2f, 0.3f, dirY);
 		float facAt = glm::smoothstep(0.4f, -0.1f, std::abs(dirY));
 
-		// Mezcla dinámica 
+		// Mezcla dinï¿½mica 
 		glm::vec3 colorAtardecer = glm::mix(MedioDia, Atardecer, facAt);
 		colorSol = glm::mix(Noche, colorAtardecer, factorDia);
 
@@ -949,13 +1055,42 @@ int main()
 
 
 		//#####
+
 		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(0.0f, -0.85f, 0.0f));
 		model = glm::translate(model, PersonajeMain);
 		model = glm::rotate(model, glm::radians(rotacionModelo), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+		glm::mat4 matrizCuerpoJake = model;
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-		testTexture.UseTexture();
-		meshList[0]->RenderMesh();
+		jake_M.RenderModel();
 
+		model = matrizCuerpoJake;
+		model = glm::translate(model, glm::vec3(0.15f, -0.4f, 0.0f));
+		model = glm::rotate(model, glm::sin(movPiernas) * 30.0f * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		jake_PieIZQ_M.RenderModel();
+
+		// 3. PIERNA DERECHA
+		model = matrizCuerpoJake;
+		model = glm::translate(model, glm::vec3(-0.15f, -0.4f, 0.0f));
+		model = glm::rotate(model, -glm::sin(movPiernas) * 30.0f * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		jake_PieDER_M.RenderModel();
+
+		// 4. BRAZO IZQUIERDO
+		model = matrizCuerpoJake;
+		model = glm::translate(model, glm::vec3(0.45f, 0.5f, 0.0f));
+		model = glm::rotate(model, -glm::sin(movPiernas) * 30.0f * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		jake_BrazoIZQ_M.RenderModel();
+
+		// 5. BRAZO DERECHO
+		model = matrizCuerpoJake;
+		model = glm::translate(model, glm::vec3(-0.45f, 0.5f, 0.0f));
+		model = glm::rotate(model, glm::sin(movPiernas) * 30.0f * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		jake_BrazoDER_M.RenderModel();
 
 
 		//DOOM Models
@@ -994,7 +1129,7 @@ int main()
 		cacoPitch += (targetPitch - cacoPitch) * 0.05f * deltaTime;
 
 		glm::vec3 direccion = cacoTarget - cacoPos;
-		float distancia = glm::length(glm::vec2(direccion.x, direccion.z)); 
+		float distancia = glm::length(glm::vec2(direccion.x, direccion.z));
 
 		if (distancia > 0.5f) {
 			glm::vec3 dirNormalizada = glm::normalize(direccion);
@@ -1008,9 +1143,9 @@ int main()
 			cacoTarget.z = (rand() % 40) - 20.0f;
 		}
 
-		timerCacoY += deltaTime * 0.01f; 
+		timerCacoY += deltaTime * 0.01f;
 		if (timerCacoY >= intervaloCacoY) {
-			cacoTarget.y = (rand() % 8) + 2.0f; 
+			cacoTarget.y = (rand() % 8) + 2.0f;
 			timerCacoY = 0.0f;
 			intervaloCacoY = (rand() % 5) + 3.0f;
 		}
@@ -1106,7 +1241,7 @@ int main()
 		// 
 		// 
 		//FORTALEZA DEL DR. WILLY
-		//el esqueleto: muralla, torres, torres con cañon, calavera, mansion, cono superior
+		//el esqueleto: muralla, torres, torres con caï¿½on, calavera, mansion, cono superior
 		model = glm::mat4(1.0);
 		model = glm::translate(model, glm::vec3(100.0f, -2.0f, 100.0f));
 		model = glm::rotate(model, -120 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1444,7 +1579,7 @@ int main()
 		}
 
 		if (timerEspera < 300 and inicio) {//de 0 a 300
-			if (rotHombroD < 90) {//para que el limite de la rotacion sea 90º
+			if (rotHombroD < 90) {//para que el limite de la rotacion sea 90ï¿½
 				rotHombroD += rotHombroDOffset * deltaTime;//incremento
 			}
 			/*else {
@@ -1453,7 +1588,7 @@ int main()
 			}//*/
 		}
 
-		if (timerEspera > 50) {//para activar la siguiente animacion (hombro izq) a la mitad de la animacion del hombro der
+		if (timerEspera > 50) {
 			siguiente = 1;
 		}
 
@@ -1463,7 +1598,7 @@ int main()
 		}
 
 		if (timerHI < 300 and siguiente) {//de 0 a 300
-			if (rotHombroI < 90) {//para que el limite de la rotacion sea 90º
+			if (rotHombroI < 90) {//para que el limite de la rotacion sea 90ï¿½
 				rotHombroI += rotHombroIOffset * deltaTime;//incremento
 				rotCodoI += rotCodoIOffset * deltaTime;
 			}
@@ -1636,46 +1771,213 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		BMO_M.RenderModel();
 
-		//jake
-		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(0.0f, -1.0f, 120.0f));
-		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-		jake_M.RenderModel();
-
 		//vias
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(-135.0f, -1.75f, 100.0f));
+		model = glm::translate(model, glm::vec3(-130.0f, -1.0f, 70.0f));
 		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(4.5f, 4.5f, 4.5f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		vias_M.RenderModel();
 
 		//vias 2
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(-135.0f, -1.75f, -20.0f));
+		model = glm::translate(model, glm::vec3(-130.0f, -1.0f, -40.0f));
 		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(4.5f, 4.5f, 4.5f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		vias_M.RenderModel();
 
+		//via curva
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-120.0f, -1.0f, -125.0f));
+		model = glm::rotate(model, 0 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		viascurva_M.RenderModel();
 
 		//vias 3
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(90.0f, -1.9f, -130.0f));
+		model = glm::translate(model, glm::vec3(-10.0f, -1.0f, -120.0f));
 		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(4.5f, 4.5f, 4.5f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		vias_M.RenderModel();
-		//TREN
-		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(90.0f, 10.0f, -130.0f));
-		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(3.5f, 3.5f, 3.5f));
-		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-		tren_M.RenderModel();
 
+		//vias4
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(80.0f, -1.0f, -120.0f));
+		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		vias_M.RenderModel();
+		
+		avanceTren += 1.0f * deltaTime;         // Velocidad del tren
+		rotLlantasTren += 5.0f * deltaTime;    // Rotaciï¿½n de las llantas
+
+		if (avanceTren > 450.0f) {
+			avanceTren = 0.0f;
+		}
+
+		// Variables temporales para recibir los cï¿½lculos
+		float tPosX, tPosZ, tRotY;
+
+	
+		CalcularPosicionTren(avanceTren, tPosX, tPosZ, tRotY); // Cï¿½lculo matemï¿½tico
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(tPosX, 10.0f, tPosZ));
+		model = glm::rotate(model, tRotY * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.0f, 7.0f, 7.0f));
+
+		glm::mat4 matrizCabina = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		tren_Cabina_M.RenderModel();
+
+		// --- LLANTAS DE LA CABINA ---
+		// Llanta Izquierda Normal
+		model = matrizCabina;
+		model = glm::translate(model, glm::vec3(1.5f, -0.5f, 2.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_cabina_izq_M.RenderModel();
+
+		// Llanta Derecha Normal
+		model = matrizCabina;
+		model = glm::translate(model, glm::vec3(-1.5f, -0.5f, 2.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_cabina_der_M.RenderModel();
+
+		// Llanta Izquierda GRANDE
+		model = matrizCabina;
+		model = glm::translate(model, glm::vec3(1.5f, -0.5f, -2.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llnata_cabina_IZQ_GRA_M.RenderModel();
+
+		// Llanta Derecha GRANDE
+		model = matrizCabina;
+		model = glm::translate(model, glm::vec3(-1.5f, -0.5f, -2.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llnata_cabina_DER_GRA_M.RenderModel();
+
+		CalcularPosicionTren(avanceTren - 70.0f, tPosX, tPosZ, tRotY);
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(tPosX, 5.0f, tPosZ));
+		model = glm::rotate(model, tRotY * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.0f, 7.0f, 7.0f));
+
+		glm::mat4 matrizVagon1 = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		tren_vagon1_M.RenderModel();
+
+		// --- LLANTAS DEL VAGï¿½N 1 ---
+		model = matrizVagon1;
+		model = glm::translate(model, glm::vec3(1.3f, -0.5f, 0.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_vagon_izq_M.RenderModel();
+
+		model = matrizVagon1;
+		model = glm::translate(model, glm::vec3(-1.3f, -0.5f, 0.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_vagon_der_M.RenderModel();
+
+		CalcularPosicionTren(avanceTren - 120.0f, tPosX, tPosZ, tRotY);
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(tPosX, 6.0f, tPosZ));
+		model = glm::rotate(model, tRotY * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.0f, 7.0f, 7.0f));
+
+		glm::mat4 matrizVagon2 = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		tren_vagon2_M.RenderModel();
+
+		// --- LLANTAS DEL VAGï¿½N 2 ---
+		model = matrizVagon2;
+		model = glm::translate(model, glm::vec3(1.5f, -0.5f, 0.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_vagon_izq_M.RenderModel();
+
+		model = matrizVagon2;
+		model = glm::translate(model, glm::vec3(-1.5f, -0.5f, 0.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_vagon_der_M.RenderModel();
+
+		CalcularPosicionTren(avanceTren - 170.0f, tPosX, tPosZ, tRotY);
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(tPosX, 6.0f, tPosZ));
+		model = glm::rotate(model, tRotY * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.0f, 7.0f, 7.0f));
+
+		glm::mat4 matrizVagon3 = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		tren_vagon3_M.RenderModel();
+
+		// --- LLANTAS DEL VAGï¿½N 3 ---
+		model = matrizVagon3;
+		model = glm::translate(model, glm::vec3(1.5f, -0.5f, 0.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_vagon_izq_M.RenderModel();
+
+		model = matrizVagon3;
+		model = glm::translate(model, glm::vec3(-1.5f, -0.5f, 0.0f));
+		model = glm::rotate(model, rotLlantasTren * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		llanta_vagon_der_M.RenderModel();
+
+		float velocidadTren = 1.0f;
+
+		rotLlantasTren += 5.0f * deltaTime;
+
+		if (estadoTren == 0) {
+			// ESTADO 0: Avanza sobre el eje X 
+			trenPosX -= velocidadTren * deltaTime;
+
+			if (trenPosX <= -120.0f) {
+				trenPosX = -120.0f;
+				estadoTren = 1;
+			}
+		}
+		else if (estadoTren == 1) {
+			float radioCurva = 10.0f;
+			float velAngular = (velocidadTren / radioCurva) * (180.0f / 3.14159265f);
+			anguloCurva += velAngular * deltaTime;
+
+			trenRotY = -90.0f + anguloCurva;
+
+			trenPosX = -130.0f + (radioCurva * cos(anguloCurva * toRadians));
+			trenPosZ = -120.0f + (radioCurva * sin(anguloCurva * toRadians));
+
+			if (anguloCurva >= 90.0f) {
+				anguloCurva = 90.0f;
+				trenRotY = 0.0f;
+				trenPosX = -130.0f;
+				trenPosZ = -110.0f;
+				estadoTren = 2;
+			}
+		}
+		else if (estadoTren == 2) {
+			// ESTADO 2: Avanza sobre el eje Z
+			trenPosZ += velocidadTren * deltaTime;
+
+			if (trenPosZ >= 100.0f) {
+				// Reiniciamos el loop
+				estadoTren = 0;
+				trenPosX = 80.0f;
+				trenPosZ = -120.0f;
+				trenRotY = -90.0f;
+				anguloCurva = 0.0f;
+			}
+		}
 		//PARA LA ANIMACION DE MEGA MAN
 		//para el inicio de la animacion
 		if (mainWindow.getsKeys()[GLFW_KEY_M]) {//cuando se presione la tecla M
@@ -1704,7 +2006,7 @@ int main()
 		}
 
 		if (timerM < 450 and mega) {//de 0 a 600
-			if (rotHombroDM < 180) {//para que el limite de la rotacion sea 90º
+			if (rotHombroDM < 180) {//para que el limite de la rotacion sea 90ï¿½
 				rotHombroDM += rotHombroDMOffset * deltaTime;//incremento
 				if (rotHombroDM1 < 20) {
 					rotHombroDM1 += rotHombroDM1Offset * deltaTime;
@@ -1811,15 +2113,15 @@ int main()
 		if (enemigo) {
 			if (!invertir) {
 				rotCodoDE += rotCodoDEOffset * deltaTime;//incremento
-				if (rotCodoDE >= 20.0f) {//hasta un maximo de 20º
-					rotCodoDE = 20.0f;//obligamos a que la rotacion no sobrepase los 20º
+				if (rotCodoDE >= 20.0f) {//hasta un maximo de 20ï¿½
+					rotCodoDE = 20.0f;//obligamos a que la rotacion no sobrepase los 20ï¿½
 					invertir = 1;
 				}
 			}
 			else {
 				rotCodoDE -= rotCodoDEOffset * deltaTime;//decremento
-				if (rotCodoDE <= 0.0f) {//hasta un minimo de 0º
-					rotCodoDE = 0.0f;//obligamos a que la rotacion no sobrepase lo 0º
+				if (rotCodoDE <= 0.0f) {//hasta un minimo de 0ï¿½
+					rotCodoDE = 0.0f;//obligamos a que la rotacion no sobrepase lo 0ï¿½
 					invertir = 0;
 
 					enemigo = 0;//para que solo se haga una vez esta animacion, por cada activacion de enemigo
