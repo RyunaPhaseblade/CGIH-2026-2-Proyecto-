@@ -114,6 +114,31 @@ float rotHombroDM3Offset;
 
 float rotHombroIM;//para el hombro izq
 float rotHombroIMOffset;
+
+
+//variables para la animacion del enemigo
+float timerE = 0.0f;
+bool enemigo = 0;
+bool invertir = 0;
+bool invertirI = 0;
+bool pausa = 0;
+bool fuego = 0;
+
+bool bolaActiva = 0;
+
+//variables para las rotaciones del enemigo y sus incrementos
+float rotCodoIE;
+float rotCodoIEOffset;
+float rotCodoDE;
+float rotCodoDEOffset;
+
+//variables para el tiro parabolico
+float tiempoBola = 0.0f;
+float velDisparo = 15.0f;
+float fuerzaSalto = 10.0f;
+float gravedad = -9.81f;
+float posY_local = 0.0f;
+float posZ_local = 0.0f;
 Window mainWindow;
 std::vector<Mesh*> meshList;
 std::vector<Shader> shaderList;
@@ -157,10 +182,18 @@ Model ZeroCodoIzq_M;
 Model ZeroManoIzq_M;
 Model ZeroEsferaE_M;
 
-//Modelos de Megaman
+//Modelos de Mega Man
 Model MegaManCuerpo_M;
 Model MegaManBrazoDer_M;
 Model MegaManBrazoIzq_M;
+
+//Modelos de Enemigo de fuego
+Model EnemigoCuerpo_M;
+Model EnemigoCodoDer_M;
+Model EnemigoManoDer_M;
+Model EnemigoCodoIzq_M;
+Model EnemigoManoIzq_M;
+Model EnemigoFuego_M;
 
 //Doom
 Model GoreNest;
@@ -478,6 +511,19 @@ int main()
 	MegaManBrazoIzq_M = Model();
 	MegaManBrazoIzq_M.LoadModel("Models/megaman_brazoIzq.obj");
 
+	//Enemigo de fuego
+	EnemigoCuerpo_M = Model();
+	EnemigoCuerpo_M.LoadModel("Models/enemigo_cuerpo.obj");
+	EnemigoCodoDer_M = Model();
+	EnemigoCodoDer_M.LoadModel("Models/enemigo_codoDer.obj");
+	EnemigoManoDer_M = Model();
+	EnemigoManoDer_M.LoadModel("Models/enemigo_manoDer.obj");
+	EnemigoCodoIzq_M = Model();
+	EnemigoCodoIzq_M.LoadModel("Models/enemigo_codoIzq.obj");
+	EnemigoManoIzq_M = Model();
+	EnemigoManoIzq_M.LoadModel("Models/enemigo_manoIzq.obj");
+	EnemigoFuego_M = Model();
+	EnemigoFuego_M.LoadModel("Models/enemigo_fuego.obj");
 
 	//Doom Modelos
 	GoreNest = Model();
@@ -613,6 +659,11 @@ int main()
 	//modelos auxiliares de mega man
 	glm::mat4 modelauxM(1.0);
 
+	//modelos auxiliares del enemigo de fuego
+	glm::mat4 modelauxB(1.0);
+	glm::mat4 modelauxCodoDB(1.0);
+	glm::mat4 modelauxCodoIB(1.0);
+
 	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec2 toffset = glm::vec2(0.0f, 0.0f);
 
@@ -665,6 +716,14 @@ int main()
 	//inicializacion de las variables que van hacer girar el hombro izquierdo de mega
 	rotHombroIM = 0.0f;
 	rotHombroIMOffset = 0.15;
+
+	//inicializacion de las variables que van hacer girar el codo derecho del enemigo
+	rotCodoDE = 0.0f;
+	rotCodoDEOffset = 2.0;
+
+	//inicializacion de las variables que van hacer girar el codo izquierdo del enemigo
+	rotCodoIE = 0.0f;
+	rotCodoIEOffset = 1.0;
 
 
 	//#####
@@ -1050,6 +1109,7 @@ int main()
 		//el esqueleto: muralla, torres, torres con cañon, calavera, mansion, cono superior
 		model = glm::mat4(1.0);
 		model = glm::translate(model, glm::vec3(100.0f, -2.0f, 100.0f));
+		model = glm::rotate(model, -120 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 		modelauxF = model;
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		Fortaleza_M.RenderModel();//*/
@@ -1455,7 +1515,7 @@ int main()
 		//cuerpo
 		model = glm::mat4(1.0);
 		model = glm::translate(model, glm::vec3(60.0f, -2.0f, 90.0f));
-		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, 60 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 		modelauxZ = model;
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		ZeroCuerpo_M.RenderModel();//*/
@@ -1735,6 +1795,131 @@ int main()
 		}
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		MegaManBrazoIzq_M.RenderModel();
+
+		//ANIMACION PARA EL ENEMIGO DE FUEGO
+		if (mainWindow.getsKeys()[GLFW_KEY_B] && !enemigo) {
+			enemigo = 1;//activa la animacion del brazo derecho
+			pausa = 1;//para pausar el brazo izq
+			invertir = 0;//para incrementar/decrementar los grados del brazo der
+
+			//para la animacion de la esfera de fuego
+			bolaActiva = 1;//activa la aniamcion
+			tiempoBola = 0.0f;//timer
+		}
+
+		//animacion del brazo derecho, el que disparara
+		if (enemigo) {
+			if (!invertir) {
+				rotCodoDE += rotCodoDEOffset * deltaTime;//incremento
+				if (rotCodoDE >= 20.0f) {//hasta un maximo de 20º
+					rotCodoDE = 20.0f;//obligamos a que la rotacion no sobrepase los 20º
+					invertir = 1;
+				}
+			}
+			else {
+				rotCodoDE -= rotCodoDEOffset * deltaTime;//decremento
+				if (rotCodoDE <= 0.0f) {//hasta un minimo de 0º
+					rotCodoDE = 0.0f;//obligamos a que la rotacion no sobrepase lo 0º
+					invertir = 0;
+
+					enemigo = 0;//para que solo se haga una vez esta animacion, por cada activacion de enemigo
+					pausa = 0;//pausamos la animacion del brazo izq
+				}
+			}
+		}
+
+		//animacion del brazo izquierdo
+		if (!pausa) {//esta siempre activa exepto cuando la animacion del brazo derecho esta activa
+			if (!invertirI) {//animacion en incremento
+				rotCodoIE += rotCodoIEOffset * deltaTime;
+				if (rotCodoIE >= 20.0f) {
+					rotCodoIE = 20.0f;
+					invertirI = 1;
+				}
+			}
+			else {//animacion en decremento
+				rotCodoIE -= rotCodoIEOffset * deltaTime;
+				if (rotCodoIE <= 0.0f) {
+					rotCodoIE = 0.0f;
+					invertirI = 0;
+				}
+			}
+		}
+
+		//animacion compleja, tiro parabolico de la esfera de fuego
+		if (bolaActiva) {//se activa a la vez que se activa la aniamcion del brazo der
+			tiempoBola += deltaTime * 0.025f;//el tiempo de la animacion
+
+			//la fisica del tiro parabolico
+			//		 y =			v0				t	  +  1/2	  g				t			t
+			posY_local = (fuerzaSalto * tiempoBola) + (0.5f * gravedad * tiempoBola * tiempoBola);
+
+			//			x	 =      vx			t
+			posZ_local = velDisparo * tiempoBola;
+
+			if (posY_local < -5.0f) { //si la bola cae por debajo del nivel del piso, se desactiva
+				bolaActiva = 0;
+			}
+		}
+
+		//ENEMIGO DE FUEGO, BLAST
+		//cuerpo
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(80.0f, -2.0f, 90.0f));
+		model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelauxB = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		EnemigoCuerpo_M.RenderModel();
+
+		//codo derecho
+		model = modelauxB;
+		model = glm::translate(model, glm::vec3(-0.9f, 1.3f, -0.3f));
+		if (enemigo) {
+			model = glm::rotate(model, -rotCodoDE * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		//model = glm::rotate(model, -20 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		modelauxCodoDB = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		EnemigoCodoDer_M.RenderModel();
+
+		//mano derecho
+		model = modelauxCodoDB;
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.15f));
+		modelauxCodoDB = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		EnemigoManoDer_M.RenderModel();//*/
+
+		//codo izq
+		model = modelauxB;
+		model = glm::translate(model, glm::vec3(1.1f, 1.5f, -0.4f));
+		model = glm::rotate(model, -rotCodoIE * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		//model = glm::rotate(model, -10 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		modelauxCodoIB = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		EnemigoCodoIzq_M.RenderModel();
+
+		//mano izq
+		model = modelauxCodoIB;
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.14f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		EnemigoManoIzq_M.RenderModel();//*/
+
+		//la esfera de fuego
+		if (bolaActiva) {//solo estara activo el modelo cuando la animacion empiece
+			//model = modelauxCodoDB;
+			model = glm::mat4(1.0);//modelo independiente
+			model = glm::translate(model, glm::vec3(78.9539f, -0.517f, 89.4216f));
+			//model = glm::translate(model, glm::vec3(-1.0461f, 1.483f, 0.5784f)); //parte del brazo derecho del enemigo
+
+			model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+
+			model = glm::translate(model, glm::vec3(0.0f, posY_local, posZ_local));//avanza en Y y Z
+
+
+
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+			EnemigoFuego_M.RenderModel();
+		}
 
 		glDisable(GL_BLEND);
 
