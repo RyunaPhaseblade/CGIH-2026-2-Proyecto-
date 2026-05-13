@@ -29,6 +29,8 @@ Textura Animada
 #include "Shader_light.h"
 #include "Camera.h"
 #include "CameraTP.h"
+#include "CameraA.h"
+#include "CameraF.h"
 #include "Texture.h"
 #include "Sphere.h"
 #include"Model.h"
@@ -45,7 +47,7 @@ const float toRadians = 3.14159265f / 180.0f;
 //variables para animación
 /*bool aelGira = false;*/
 // 90 segundos para un ciclo completo
-const float duracionCiclo = 20.0f;
+const float duracionCiclo = 60.0f;
 
 
 //Camaras
@@ -76,6 +78,7 @@ float timerD3 = 0.0f;
 bool disparo1 = 0;
 bool disparo2 = 0;
 bool disparo3 = 0;
+bool nuevoDisparo = 0;
 
 //variables para las rotaciones de zero y sus incrementos
 float rotHombroD;//para el hombro derecho
@@ -91,9 +94,39 @@ float movEsferaE2Offset;
 float movEsferaE3;//para mover las esferas de energia
 float movEsferaE3Offset;
 
+//variables para la animacion de mega man
+float timerM = 0.0f;
+bool mega = 0;
+bool mega1 = 0;
+bool cambio = 0;
+bool mega2 = 0;
+bool cambioI = 0;
+
+//variables para las rotaciones de mega y sus incrementos
+float rotHombroDM;//para el hombro derecho
+float rotHombroDMOffset;
+float rotHombroDM1;//para el hombro derecho
+float rotHombroDM1Offset;
+float rotHombroDM2;//para el hombro derecho
+float rotHombroDM2Offset;
+float rotHombroDM3;//para el hombro derecho
+float rotHombroDM3Offset;
+
+float rotHombroIM;//para el hombro izq
+float rotHombroIMOffset;
 Window mainWindow;
 std::vector<Mesh*> meshList;
 std::vector<Shader> shaderList;
+
+//Variables para Cacodemonio
+glm::vec3 cacoPos = glm::vec3(0.0f, 5.0f, 0.0f);   
+glm::vec3 cacoTarget = glm::vec3(5.0f, 5.0f, 5.0f); 
+float cacoVel = 0.05f;         
+float cacoAngle = 0.0f;        
+float timerCacoY = 0.0f;       
+float intervaloCacoY = 5.0f;
+float cacoPitch = 0.0f;        
+float targetPitch = 0.0f;      
 
 Camera camera;
 CameraTP cameraTP;
@@ -102,6 +135,7 @@ CameraTP cameraTP;
 //Testuras
 /*Texture brickTexture;*/
 Texture pisoTexture;
+Texture testTexture;
 
 //Modelos
 Model Fortaleza_M;
@@ -113,7 +147,7 @@ Model EngranajeCono2_M;//Engranaje cono superior
 Model EngranajeF1_M;//Engranaje frotando derecho
 Model EngranajeF2_M;//Engranaje frotando izquierdo
 
-//Modelos de Zero
+//modelos de zero
 Model ZeroCuerpo_M;
 Model ZeroHombroDer_M;
 Model ZeroBrazoDer_M;
@@ -123,11 +157,28 @@ Model ZeroCodoIzq_M;
 Model ZeroManoIzq_M;
 Model ZeroEsferaE_M;
 
-//model casa del arbol
+//Modelos de Megaman
+Model MegaManCuerpo_M;
+Model MegaManBrazoDer_M;
+Model MegaManBrazoIzq_M;
+
+//Doom
+Model GoreNest;
+Model GoldNest;
+Model Cacodemon;
+Model MarauderB;
+Model MarauderR;
+Model MarauderL;
+Model Esfera;
+
+//Modelos Casa del arbol
 Model CasaArbol_M;
 
-//Model Molino
+//Modelos Molino
 Model Molino_M;
+
+//Modelos luces
+Model Farola;
 
 //Model relojM
 Model relojM;
@@ -246,7 +297,7 @@ void CreateObjects()
 
 
 	};
-	
+
 
 	unsigned int flechaIndices[] = {
 	   0, 1, 2,
@@ -289,15 +340,15 @@ void CreateObjects()
 
 
 
-	Mesh *obj1 = new Mesh();
+	Mesh* obj1 = new Mesh();
 	obj1->CreateMesh(vertices, indices, 32, 12);
 	meshList.push_back(obj1);
 
-	Mesh *obj2 = new Mesh();
+	Mesh* obj2 = new Mesh();
 	obj2->CreateMesh(vertices, indices, 32, 12);
 	meshList.push_back(obj2);
 
-	Mesh *obj3 = new Mesh();
+	Mesh* obj3 = new Mesh();
 	obj3->CreateMesh(floorVertices, floorIndices, 32, 6);
 	meshList.push_back(obj3);
 
@@ -323,7 +374,7 @@ void CreateObjects()
 
 void CreateShaders()
 {
-	Shader *shader1 = new Shader();
+	Shader* shader1 = new Shader();
 	shader1->CreateFromFiles(vShader, fShader);
 	shaderList.push_back(*shader1);
 }
@@ -343,6 +394,8 @@ int main()
 
 	pisoTexture = Texture("Textures/piso.tga");
 	pisoTexture.LoadTextureA();
+	testTexture = Texture("Textures/blanco.png");
+	testTexture.LoadTextureA();
 
 	//fortaleza
 	Fortaleza_M = Model();
@@ -363,7 +416,7 @@ int main()
 	EngranajeF2_M = Model();
 	EngranajeF2_M.LoadModel("Models/engranaje_frotando2.obj");
 
-	//Zero
+	//Zero5
 	ZeroCuerpo_M = Model();
 	ZeroCuerpo_M.LoadModel("Models/zero_cuerpo.obj");
 	ZeroHombroDer_M = Model();
@@ -381,14 +434,13 @@ int main()
 	ZeroEsferaE_M = Model();
 	ZeroEsferaE_M.LoadModel("Models/zero_esferaE.obj");
 
-	// casa del arbol
 	CasaArbol_M = Model();
 	CasaArbol_M.LoadModel("Models/CASARBOL.obj");
 
 	//
 	Molino_M = Model();
 	Molino_M.LoadModel("Models/Molino.obj");
-	
+
 	//REloj central
 
 	relojM = Model();
@@ -411,6 +463,36 @@ int main()
 	tren_M = Model();
 	tren_M.LoadModel("Models/tren.obj");
 
+	//Mega Man
+	MegaManCuerpo_M = Model();
+	MegaManCuerpo_M.LoadModel("Models/megaman_cuerpo.obj");
+	MegaManBrazoDer_M = Model();
+	MegaManBrazoDer_M.LoadModel("Models/megaman_brazoDer.obj");
+	MegaManBrazoIzq_M = Model();
+	MegaManBrazoIzq_M.LoadModel("Models/megaman_brazoIzq.obj");
+
+
+	//Doom Modelos
+	GoreNest = Model();
+	GoreNest.LoadModel("Models/gorenest.obj");
+	GoldNest = Model();
+	GoldNest.LoadModel("Models/golden_Nest.obj");
+	Cacodemon = Model();
+	Cacodemon.LoadModel("Models/cacodemon.obj");
+	MarauderB = Model();
+	MarauderB.LoadModel("Models/marauder_b.obj");
+	MarauderR = Model();
+	MarauderR.LoadModel("Models/marauder_ra.obj");
+	MarauderL = Model();
+	MarauderL.LoadModel("Models/marauder_la.obj");
+	Esfera = Model();
+	Esfera.LoadModel("Models/esfera.obj");
+
+	//Extras
+	Farola = Model();
+	Farola.LoadModel("Models/farola.obj");
+
+
 	std::vector<std::string> skyboxFaces;
 	skyboxFaces.push_back("Textures/Skybox/cupertin-lake_rt.tga");
 	skyboxFaces.push_back("Textures/Skybox/cupertin-lake_lf.tga");
@@ -418,7 +500,6 @@ int main()
 	skyboxFaces.push_back("Textures/Skybox/cupertin-lake_up.tga");
 	skyboxFaces.push_back("Textures/Skybox/cupertin-lake_bk.tga");
 	skyboxFaces.push_back("Textures/Skybox/cupertin-lake_ft.tga");
-
 	skybox = Skybox(skyboxFaces);
 
 	Material_brillante = Material(4.0f, 256);
@@ -432,13 +513,47 @@ int main()
 	//contador de luces puntuales
 	unsigned int pointLightCount = 0;
 	//Declaración de primer luz puntual
-	/*
-	pointLights[0] = PointLight(1.0f, 0.0f, 0.0f,
-		0.0f, 1.0f,
-		0.0f, 2.5f, 1.5f,
+
+	//GoldNest
+	pointLights[0] = PointLight(
+		1.0f, 0.2f, 0.0f,       
+		10.0f, 15.0f,          
+		-120.0f, 23.0f, 35.0f,     
+		1.0f, 0.1f, 0.16f
+	);
+
+	//Farola 1
+	pointLights[1] = PointLight(1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,
+		-20.0f, 4.5f, 43.8f,
 		0.3f, 0.2f, 0.1f);
 	pointLightCount++;
-	*/
+
+	pointLights[2] = PointLight(1.0f, 0.0f, 0.0f,
+		1.0f, 1.0f,
+		-40.0f, 6.0f, 55.0f,
+		0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
+	pointLights[3] = PointLight(1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,
+		-60.0f, 4.5f, 43.8f,
+		0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
+	pointLights[4] = PointLight(1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,
+		-40.0f, 4.5f, 16.2f,
+		0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
+	pointLights[5] = PointLight(1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,
+		-80.0f, 4.5f, 16.2f,
+		0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
+
 	unsigned int spotLightCount = 0;
 	/*
 	//linterna
@@ -462,24 +577,25 @@ int main()
 
 
 	GLuint uniformProjection = 0, uniformModel = 0, uniformView = 0, uniformEyePosition = 0,
-		uniformSpecularIntensity = 0, uniformShininess = 0, uniformTextureOffset=0;
+		uniformSpecularIntensity = 0, uniformShininess = 0, uniformTextureOffset = 0;
 	GLuint uniformColor = 0;
 	glm::mat4 projection = glm::perspective(45.0f, (GLfloat)mainWindow.getBufferWidth() / mainWindow.getBufferHeight(), 0.1f, 1000.0f);
-	
+
 	glm::vec3 lowerLight(0.0f, 0.0f, 0.0f);
 
 	glm::mat4 model(1.0);
 	glm::mat4 modelaux(1.0);
-
 	//modelos auxiliares de la fortaleza
-	glm::mat4 modelauxE(1.0);
 	glm::mat4 modelauxD(1.0);
+	glm::mat4 modelauxE(1.0);
 	glm::mat4 modelauxF(1.0);
-
 	//modelos auxiliares de zero
 	glm::mat4 modelauxZ(1.0);
 	glm::mat4 modelauxHDerZ(1.0);
 	glm::mat4 modelauxHIzqZ(1.0);
+
+	//modelos auxiliares de mega man
+	glm::mat4 modelauxM(1.0);
 
 	glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 	glm::vec2 toffset = glm::vec2(0.0f, 0.0f);
@@ -494,6 +610,7 @@ int main()
 	rotEngranaje3Offset = 0.25f;
 	rotEngranaje4 = 0;
 	rotEngranaje4Offset = 0.2f;
+
 
 	//inicializacion de las variables que van hacer girar el hombro derecho de zero
 	rotHombroD = 0.0f;
@@ -515,14 +632,70 @@ int main()
 	movEsferaE3 = 0.0f;
 	movEsferaE3Offset = 0.4;
 
-	// Posiciones 
-	glm::vec3 posModelo = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	bool engineCameraTP = false;
+	//inicializacion de las variables que van hacer girar el hombro derecho de mega
+	rotHombroDM = 0.0f;
+	rotHombroDMOffset = 2.5;
+
+	rotHombroDM1 = 0.0f;
+	rotHombroDM1Offset = 0.27;
+
+	rotHombroDM2 = 0.0f;
+	rotHombroDM2Offset = 1.25;
+
+	rotHombroDM3 = 0.0f;
+	rotHombroDM3Offset = 1.25;
+
+	//inicializacion de las variables que van hacer girar el hombro izquierdo de mega
+	rotHombroIM = 0.0f;
+	rotHombroIMOffset = 0.15;
+
+
+	//#####
+	//Dia/noche variables
+	float duracionCiclo = 90.0f; // Tiempo del ciclo
+	float dirZ = 0.0f;
+
+	// Colores 
+	glm::vec3 MedioDia = glm::vec3(1.0f, 1.0f, 0.95f);
+	glm::vec3 Atardecer = glm::vec3(1.0f, 0.4f, 0.15f);
+	glm::vec3 Noche = glm::vec3(0.15f, 0.18f, 0.25f);
+
+	// Variables de estado de la luz
+	float ambientIntensity = 0.15f;
+	float diffuseIntensity = 0.10;
+	glm::vec3 colorSol = glm::vec3(0.0f);
+
+	//####
+
+
+	// Posiciones 
+	glm::vec3 PersonajeMain = glm::vec3(0.0f, 0.0f, 0.0f);
+	float rotacionModelo = 0.0f;
+	glm::vec3 posModelo = glm::vec3(0.0f, 0.0f, 0.0f);	
+
+	int tipoCamara = 0; // 0: Libre, 1: TP, 2: Aérea
+	bool f5Presionada = false;
+	bool TPV_C = false;
 	Camera cameraFP;
 	cameraFP = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -60.0f, 0.0f, 0.5f, 0.5f);
+
+
 	CameraTP cameraTP(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 20.0f, 10.0f, 0.5f);
-	
+	// Ligamos la cámara a la dirección de memoria de PersonajeMain
+	cameraTP.establecerObjetivo(&PersonajeMain, 15.0f, 5.0f);
+
+	CameraA cameraA;
+	cameraA = CameraA(glm::vec3(0.0f, 75.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
+
+
+	CameraF cameraF = CameraF(glm::vec3(10.0f, 20.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	CameraF cameraF2 = CameraF(glm::vec3(-10.0f, 20.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+
+	//######
+
+	//#####
 	////Loop mientras no se cierra la ventana
 	while (!mainWindow.getShouldClose())
 	{
@@ -532,17 +705,64 @@ int main()
 		lastTime = now;
 
 		glfwPollEvents();
-		camera.keyControl(mainWindow.getsKeys(), deltaTime);
-		camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
+		glm::mat4 vistaActual;
+		glm::vec3 posOjo, dirOjo;
 
-		/*
-		if (mainWindow.getCam()) {
-			cameraTP.keyControl(mainWindow.getsKeys(), deltaTime);
+		// Camaras
+		tipoCamara = mainWindow.getCam();
+
+		if (tipoCamara == 1) { // TERCERA PERSONA
 			cameraTP.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
-		} else {
-			cameraFP.keyControl(mainWindow.getsKeys(), deltaTime);
-			cameraFP.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
-		}*/
+
+			glm::vec3 camFront = cameraTP.getCameraDirection();
+			glm::vec3 walkForward = glm::normalize(glm::vec3(camFront.x, 0.0f, camFront.z));
+			glm::vec3 walkRight = glm::normalize(glm::cross(walkForward, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+			glm::vec3 direccionMovimiento(0.0f);
+			float velocidadModelo = 1.0f * deltaTime;
+
+			// 
+			if (mainWindow.getsKeys()[GLFW_KEY_W]) direccionMovimiento += walkForward;
+			if (mainWindow.getsKeys()[GLFW_KEY_S]) direccionMovimiento -= walkForward;
+			if (mainWindow.getsKeys()[GLFW_KEY_A]) direccionMovimiento -= walkRight;
+			if (mainWindow.getsKeys()[GLFW_KEY_D]) direccionMovimiento += walkRight;
+
+			// 
+			if (glm::length(direccionMovimiento) > 0.0f) {
+				direccionMovimiento = glm::normalize(direccionMovimiento);
+				PersonajeMain += direccionMovimiento * velocidadModelo;
+				rotacionModelo = glm::degrees(atan2(direccionMovimiento.x, direccionMovimiento.z));
+			}
+
+			vistaActual = cameraTP.calculateViewMatrix();
+			posOjo = cameraTP.getCameraPosition();
+			dirOjo = cameraTP.getCameraDirection();
+		}
+		else if (tipoCamara == 2) { // AÉREA (NUEVA)
+			cameraA.keyControl(mainWindow.getsKeys(), deltaTime);
+			// mouseControl no hace nada por definición en CameraA
+			vistaActual = cameraA.calculateViewMatrix();
+			posOjo = cameraA.getCameraPosition();
+			dirOjo = cameraA.getCameraDirection();
+		}
+		else if (tipoCamara == 3) {
+			vistaActual = cameraF.calculateViewMatrix();
+			posOjo = cameraF.getCameraPosition();
+			dirOjo = cameraF.getCameraDirection();
+		}
+		else if (tipoCamara == 4) {
+			vistaActual = cameraF2.calculateViewMatrix();
+			posOjo = cameraF2.getCameraPosition();
+			dirOjo = cameraF2.getCameraDirection();
+		}
+		else {
+			camera.keyControl(mainWindow.getsKeys(), deltaTime);
+			camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());
+			vistaActual = camera.calculateViewMatrix();
+			posOjo = camera.getCameraPosition();
+			dirOjo = camera.getCameraDirection();
+		}
+
 
 		//para el incremento en las rotaciones de los engranajes
 		rotEngranaje += rotEngranajeOffset * deltaTime;
@@ -567,62 +787,71 @@ int main()
 		uniformShininess = shaderList[0].GetShininessLocation();
 
 		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(camera.calculateViewMatrix()));
-		glUniform3f(uniformEyePosition, camera.getCameraPosition().x, camera.getCameraPosition().y, camera.getCameraPosition().z);
+		glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(vistaActual));
+		glUniform3f(uniformEyePosition, posOjo.x, posOjo.y, posOjo.z);
+
 
 		// luz ligada a la cámara de tipo flash
 		lowerLight = camera.getCameraPosition();
 		lowerLight.y -= 0.3f;
 		spotLights[0].SetFlash(lowerLight, camera.getCameraDirection());
+		///#####
 
-		// --- LÓGICA DE CICLO DÍA/NOCHE ---
-		float tiempoActual = glfwGetTime();
-		// Progreso de 0.0 a 1.0 cada 90 segundos
+
+		//######
+		// Ciclo Dia Noche
+		// Cálculo de tiempo y posición del sol
+		float tiempoActual = (float)glfwGetTime();
 		float progreso = fmod(tiempoActual, duracionCiclo) / duracionCiclo;
-
-		// Convertir progreso a radianes (360 grados)
 		float anguloSol = progreso * 2.0f * 3.14159265f;
 
-		// El sol se mueve en el plano XY (atardece en X, sube en Y)
 		float dirX = sin(anguloSol);
-		float dirY = cos(anguloSol); // Positivo = Día, Negativo = Noche
-		float dirZ = -1.0f;          // Mantener ligera inclinación para sombras interesantes
+		float dirY = cos(anguloSol);
 
-		// Variables para los nuevos estados de la luz
-		float ambientIntensity, diffuseIntensity;
-		glm::vec3 colorSol;
+		// Transiciones
+		float factorDia = glm::smoothstep(-0.2f, 0.3f, dirY);
+		float facAt = glm::smoothstep(0.4f, -0.1f, std::abs(dirY));
+
+		// Mezcla dinámica 
+		glm::vec3 colorAtardecer = glm::mix(MedioDia, Atardecer, facAt);
+		colorSol = glm::mix(Noche, colorAtardecer, factorDia);
 
 		if (dirY > 0) {
-			// ESTADO: DÍA (Sol sobre el horizonte)
-			// El color varía de naranja (amanecer) a blanco (cenit)
-			float factorAmanecer = std::min(1.0f, dirY * 5.0f); // Transición rápida al salir el sol
-			colorSol = glm::mix(glm::vec3(1.0f, 0.4f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f), factorAmanecer);
-
-			ambientIntensity = 0.2f + (dirY * 0.3f); // Más luz ambiente al mediodía
-			diffuseIntensity = dirY * 0.8f;          // Luz directa fuerte
+			diffuseIntensity = std::max(0.10f, dirY * 0.8f);
 		}
 		else {
-			// ESTADO: NOCHE (Sol bajo el horizonte)
-			colorSol = glm::vec3(0.1f, 0.1f, 0.2f);  // Tono azulado nocturno
-			ambientIntensity = 2.0f;                // Luz mínima para ver la Fortaleza
-			diffuseIntensity = 0.0f;                 // No hay luz directa del sol
+			diffuseIntensity = 0.10f;
 		}
 
-		// Como no tienes SetDirectionalLight, creamos un objeto nuevo en cada iteración 
-		// o actualizamos el existente si tu clase lo permite. 
-		// La forma más segura con tu código actual:
-		mainLight = DirectionalLight(colorSol.r, colorSol.g, colorSol.b,
-			ambientIntensity, diffuseIntensity,
-			dirX, dirY, dirZ);
+		mainLight = DirectionalLight(
+			colorSol.r, colorSol.g, colorSol.b,
+			ambientIntensity,
+			diffuseIntensity,
+			dirX, dirY, dirZ
+		);
 
-		// --- FIN LÓGICA DÍA/NOCHE ---
+		//#####
 
-		// Luego sigues con el envío al shader que ya tenías:
+
 		shaderList[0].SetDirectionalLight(&mainLight);
+		PointLight lucesActivas[MAX_POINT_LIGHTS];
+		unsigned int conteoActivas = 0;
+		lucesActivas[conteoActivas] = pointLights[0];
+		conteoActivas++;
+		lucesActivas[conteoActivas] = pointLights[2];
+		conteoActivas++;
+		if (dirY < 0) {
+			lucesActivas[conteoActivas] = pointLights[1];
+			conteoActivas++;
+			lucesActivas[conteoActivas] = pointLights[3];
+			conteoActivas++;
+			lucesActivas[conteoActivas] = pointLights[4];
+			conteoActivas++;
+			lucesActivas[conteoActivas] = pointLights[5];
+			conteoActivas++;
 
-		//información al shader de fuentes de iluminación
-		shaderList[0].SetDirectionalLight(&mainLight);
-		shaderList[0].SetPointLights(pointLights, pointLightCount);
+		}
+		shaderList[0].SetPointLights(lucesActivas, conteoActivas);
 		shaderList[0].SetSpotLights(spotLights, spotLightCount);
 
 
@@ -634,7 +863,7 @@ int main()
 		glUniform2fv(uniformTextureOffset, 1, glm::value_ptr(toffset));
 		model = glm::mat4(1.0);
 		model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(30.0f, 1.0f, 30.0f));
+		model = glm::scale(model, glm::vec3(15.0f, 1.0f, 15.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform3fv(uniformColor, 1, glm::value_ptr(color));
 		glUniform2fv(uniformTextureOffset, 1, glm::value_ptr(toffset));
@@ -643,15 +872,149 @@ int main()
 
 		meshList[2]->RenderMesh();
 
+
+		//#####
 		model = glm::mat4(1.0);
-		model = glm::translate(model, posModelo);
+		model = glm::translate(model, PersonajeMain);
+		model = glm::rotate(model, glm::radians(rotacionModelo), glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		testTexture.UseTexture();
 		meshList[0]->RenderMesh();
 
+
+
+		//DOOM Models
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-40.0f, -2.0f, 55.0f));
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		GoreNest.RenderModel();
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-120.0f, -2.0f, 35.0f));
+		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelaux = model;
+		model = glm::scale(model, glm::vec3(0.35f, 0.35f, 0.35f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		GoldNest.RenderModel();
+
+		model = modelaux;
+		model = glm::translate(model, glm::vec3(0.0f, 50.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(250.0f, 250.0f, 250.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Esfera.RenderModel();
+
+		//Cacodemon movimiento
+
+		float diffY = cacoTarget.y - cacoPos.y;
+
+		if (std::abs(diffY) > 0.1f) {
+			targetPitch = (diffY > 0) ? -15.0f : 15.0f;
+		}
+		else {
+			targetPitch = -5.0f;
+		}
+
+		cacoPitch += (targetPitch - cacoPitch) * 0.05f * deltaTime;
+
+		glm::vec3 direccion = cacoTarget - cacoPos;
+		float distancia = glm::length(glm::vec2(direccion.x, direccion.z)); 
+
+		if (distancia > 0.5f) {
+			glm::vec3 dirNormalizada = glm::normalize(direccion);
+			cacoPos.x += dirNormalizada.x * cacoVel * deltaTime;
+			cacoPos.z += dirNormalizada.z * cacoVel * deltaTime;
+			float targetAngle = glm::degrees(atan2(dirNormalizada.x, dirNormalizada.z));
+			cacoAngle = targetAngle;
+		}
+		else {
+			cacoTarget.x = (rand() % 40) - 20.0f;
+			cacoTarget.z = (rand() % 40) - 20.0f;
+		}
+
+		timerCacoY += deltaTime * 0.01f; 
+		if (timerCacoY >= intervaloCacoY) {
+			cacoTarget.y = (rand() % 8) + 2.0f; 
+			timerCacoY = 0.0f;
+			intervaloCacoY = (rand() % 5) + 3.0f;
+		}
+
+		cacoPos.y += (cacoTarget.y - cacoPos.y) * 0.01f * deltaTime;
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-90.0f, 15.0f, 35.0f));
+		model = glm::translate(model, cacoPos);
+		model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, cacoAngle * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, cacoPitch * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		float balanceoZ = sin(glfwGetTime() * 1.5f) * 3.0f;
+		model = glm::rotate(model, balanceoZ * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		float flotado = sin(glfwGetTime() * 2.0f) * 0.2f;
+		model = glm::translate(model, glm::vec3(0.0f, flotado, 0.0f));
+		model = glm::scale(model, glm::vec3(0.290f, 0.290f, 0.290f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Cacodemon.RenderModel();
+
+		//Marauder
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-90.0f, -2.0f, 45.0f));
+		model = glm::rotate(model, 45 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
+		modelaux = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MarauderB.RenderModel();
+
+		model = modelaux;
+		model = glm::translate(model, glm::vec3(0.0f, 53.0f, -7.05f));
+		model = glm::rotate(model, -80 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MarauderL.RenderModel();
+
+		model = modelaux;
+		model = glm::translate(model, glm::vec3(0.0f, 50.0f, 7.05f));
+		model = glm::rotate(model, 80 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MarauderR.RenderModel();
+
+		//Repetir cuantas veces sea necesario, para dar mas iluminacion por la noche.
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-20.0f, 0.0f, 45.0f));
+		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Farola.RenderModel();
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-40.0f, 0.0f, 15.0f));
+		model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Farola.RenderModel();
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-60.0f, 0.0f, 45.0f));
+		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Farola.RenderModel();
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-80.0f, 0.0f, 15.0f));
+		model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Farola.RenderModel();
+
+
+		//####
+		// 
+		// 
 		//FORTALEZA DEL DR. WILLY
 		//el esqueleto: muralla, torres, torres con cañon, calavera, mansion, cono superior
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(170.0f, -2.0f, 75.0f));
+		model = glm::translate(model, glm::vec3(100.0f, -2.0f, -25.0f));
 		modelauxF = model;
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		Fortaleza_M.RenderModel();//*/
@@ -935,13 +1298,14 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		EngranajeF2_M.RenderModel();//*/
 
+		//PARA LA ANIMACION DE ZERO
 		//para el inicio de la animacion del hombro derecho de zero
-		if (mainWindow.getsKeys()[GLFW_KEY_I]) {//cuando se presione la tecla I
+		if (mainWindow.getsKeys()[GLFW_KEY_Z]) {//cuando se presione la tecla Z
 			inicio = 1;//bandera
 		}
 
 		//para el reseteo de la animacion en general
-		if (mainWindow.getsKeys()[GLFW_KEY_R]) {//cuando se presione la tecla R
+		if (mainWindow.getsKeys()[GLFW_KEY_X]) {//cuando se presione la tecla X
 			//para el hombro der
 			inicio = 0;
 			timerEspera = 0;
@@ -955,6 +1319,20 @@ int main()
 
 			//para la esfera de energia
 			disparo1 = 0;
+			disparo2 = 0;
+			disparo3 = 0;
+			timerD = 0;
+			timerD2 = 0;
+			timerD3 = 0;
+			movEsferaE = 0;
+			movEsferaE2 = 0;
+			movEsferaE3 = 0;
+			nuevoDisparo = 0;
+		}
+
+		//para que se repita las veces que sea los tres disparos
+		if (mainWindow.getsKeys()[GLFW_KEY_C]) {//cuando se presione la tecla C
+			disparo1 = 1;
 			disparo2 = 0;
 			disparo3 = 0;
 			timerD = 0;
@@ -996,17 +1374,18 @@ int main()
 			}
 			else {
 				disparo1 = 1;
+				nuevoDisparo = 1;
 				//printf("\ntimerEspera %f", timerEspera);
 			}//*/
 		}
 
 		//PARA LAS ESFERAS DE ENERGIA
 		//primera esfera de energia
-		if (disparo1) {
+		if (disparo1 and nuevoDisparo) {
 			timerD++;
 		}
 
-		if (timerD < 1000 and disparo1) {//de 0 a 1000
+		if (timerD < 1000 and nuevoDisparo) {//de 0 a 1000
 			movEsferaE += movEsferaEOffset * deltaTime;//incremento
 		}
 
@@ -1040,7 +1419,7 @@ int main()
 		//ZERO
 		//cuerpo
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(170.0f, -2.0f, 90.0f));
+		model = glm::translate(model, glm::vec3(120.0f, -2.0f, 90.0f));
 		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 		modelauxZ = model;
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -1082,7 +1461,7 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		ZeroBrazoIzq_M.RenderModel();//*/
 
-		//codo izq  
+		//codo izq
 		model = modelauxHIzqZ;
 		model = glm::translate(model, glm::vec3(0.0f, -0.4f, 0.0f));
 		if (siguiente) {
@@ -1183,7 +1562,7 @@ int main()
 		model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		vias_M.RenderModel();
-		
+
 
 		//vias 3
 		model = glm::mat4(1.0);
@@ -1200,15 +1579,133 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		tren_M.RenderModel();
 
+		//PARA LA ANIMACION DE MEGA MAN
+		//para el inicio de la animacion
+		if (mainWindow.getsKeys()[GLFW_KEY_M]) {//cuando se presione la tecla M
+			mega = 1;//bandera
+		}
 
+		//para el reseteo de la animacion en general
+		if (mainWindow.getsKeys()[GLFW_KEY_N]) {//cuando se presione la tecla N
+			//para el hombro derecho
+			mega = 0;
+			timerM = 0;
+			rotHombroDM = 0;
+			rotHombroDM1 = 0;
+			rotHombroDM2 = 0;
+			mega1 = 0;
+			rotHombroDM3 = 0;
+
+			//para el hombro izquierdo
+			mega2 = 0;
+			rotHombroIM = 0;
+
+		}
+
+		if (mega) {
+			timerM++;
+		}
+
+		if (timerM < 450 and mega) {//de 0 a 600
+			if (rotHombroDM < 180) {//para que el limite de la rotacion sea 90º
+				rotHombroDM += rotHombroDMOffset * deltaTime;//incremento
+				if (rotHombroDM1 < 20) {
+					rotHombroDM1 += rotHombroDM1Offset * deltaTime;
+				}
+				if (rotHombroDM2 < 90) {
+					rotHombroDM2 += rotHombroDM2Offset * deltaTime;
+				}
+			}
+			else {
+				//siguiente = 1;
+				//printf("\ntimerEspera %f", timerM);
+			}//*/
+		}
+
+		if (timerM > 300) {
+			mega1 = 1;
+			mega2 = 1;
+		}
+
+		if (mega1) {
+			if (rotHombroDM3 < 50 and !cambio) {
+				rotHombroDM3 += rotHombroDM3Offset * deltaTime;
+			}
+			else {
+				cambio = 1;
+			}
+
+			if (rotHombroDM3 > 5 and cambio) {
+				rotHombroDM3 -= rotHombroDM3Offset * deltaTime;
+			}
+			else {
+				cambio = 0;
+			}
+		}
+
+		if (mega2) {
+			if (rotHombroIM < 5 and !cambioI) {
+				rotHombroIM += rotHombroIMOffset * deltaTime;
+			}
+			else {
+				cambioI = 1;
+			}
+			if (rotHombroIM > 0 and cambioI) {
+				rotHombroIM -= rotHombroIMOffset * deltaTime;
+			}
+			else {
+				cambioI = 0;
+			}
+		}
+
+		//MEGAMAN
+		//cuerpo
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(100.0f, -2.0f, 90.0f));
+		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		if (mega2) {
+			model = glm::rotate(model, rotHombroIM * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+		modelauxM = model;
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MegaManCuerpo_M.RenderModel();
+
+		//brazo derecho
+		model = modelauxM;
+		model = glm::translate(model, glm::vec3(-0.3762f, 2.7191f, -0.1178f));
+		model = glm::rotate(model, -20 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));//inclinacion inicial
+		if (mega) {
+			model = glm::rotate(model, -rotHombroDM * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota el brazo para que este arriba
+			model = glm::rotate(model, -rotHombroDM1 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));//reacomoda el brazo de la rotacion inicial
+			model = glm::rotate(model, rotHombroDM2 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));//gira el brazo, para que la palma este de frente
+		}
+		//model = glm::rotate(model, -180 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota el brazo para que este arriba
+		//model = glm::rotate(model, -20 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));//reacomoda el brazo de la rotacion inicial
+		//model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));//gira el brazo, para que la palma este de frente
+		if (mega1) {
+			model = glm::rotate(model, rotHombroDM3 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota la mano para hacer el saludo, el limite
+		}
+		//model = glm::rotate(model, 45 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));//rota la mano para hacer el saludo, el limite
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MegaManBrazoDer_M.RenderModel();
+
+		//brazo izquierdo
+		model = modelauxM;
+		model = glm::translate(model, glm::vec3(0.3762f, 2.7191f, -0.1178f));
+		model = glm::rotate(model, 20 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		if (mega2) {
+			model = glm::rotate(model, rotHombroIM * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		MegaManBrazoIzq_M.RenderModel();
 
 		glDisable(GL_BLEND);
 
 		glUseProgram(0);
 
 		mainWindow.swapBuffers();
-		
+
 	}
 	return 0;
-	
+
 }
