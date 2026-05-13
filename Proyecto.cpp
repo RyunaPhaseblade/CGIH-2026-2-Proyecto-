@@ -193,6 +193,13 @@ Model vias_M;
 //modelo tren
 Model tren_M;
 
+//Modelos extras
+Model arboles1;
+Model arboles2;
+Model arbolesL;
+Model Silla;
+Model Bote;
+
 Skybox skybox;
 
 //materiales
@@ -491,7 +498,16 @@ int main()
 	//Extras
 	Farola = Model();
 	Farola.LoadModel("Models/farola.obj");
-
+	arboles1 = Model();
+	arboles1.LoadModel("Models/arboles_grupo1.obj");
+	arboles2 = Model();
+	arboles2.LoadModel("Models/arboles_grupo2.obj");
+	arbolesL = Model();
+	arbolesL.LoadModel("Models/arboles_hilera.obj");
+	Silla = Model();
+	Silla.LoadModel("Models/silla_parque.obj");
+	Bote = Model();
+	Bote.LoadModel("Models/bote_basura.obj");
 
 	std::vector<std::string> skyboxFaces;
 	skyboxFaces.push_back("Textures/Skybox/cupertin-lake_rt.tga");
@@ -518,7 +534,7 @@ int main()
 	pointLights[0] = PointLight(
 		1.0f, 0.2f, 0.0f,       
 		10.0f, 15.0f,          
-		-120.0f, 23.0f, 35.0f,     
+		-100.0f, 23.0f, 35.0f,     
 		1.0f, 0.1f, 0.16f
 	);
 
@@ -892,7 +908,7 @@ int main()
 		GoreNest.RenderModel();
 
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(-120.0f, -2.0f, 35.0f));
+		model = glm::translate(model, glm::vec3(-100.0f, -2.0f, 35.0f));
 		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 		modelaux = model;
 		model = glm::scale(model, glm::vec3(0.35f, 0.35f, 0.35f));
@@ -1008,13 +1024,32 @@ int main()
 		Farola.RenderModel();
 
 
+		//Arboleda
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-75.0f, 0.0f, -50.0f));
+		model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		arboles1.RenderModel();
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-30.0f, 0.0f, -20.0f));
+		model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Bote.RenderModel();
+
+		model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(-50.0f, 0.0f, -20.0f));
+		model = glm::rotate(model, -90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		Silla.RenderModel();
+
 		//####
 		// 
 		// 
 		//FORTALEZA DEL DR. WILLY
 		//el esqueleto: muralla, torres, torres con cañon, calavera, mansion, cono superior
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(100.0f, -2.0f, -25.0f));
+		model = glm::translate(model, glm::vec3(100.0f, -2.0f, 100.0f));
 		modelauxF = model;
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		Fortaleza_M.RenderModel();//*/
@@ -1419,7 +1454,7 @@ int main()
 		//ZERO
 		//cuerpo
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(120.0f, -2.0f, 90.0f));
+		model = glm::translate(model, glm::vec3(60.0f, -2.0f, 90.0f));
 		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 		modelauxZ = model;
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -1511,23 +1546,24 @@ int main()
 
 		//CASA del arbol (ADventure time)
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(210.0f, -4.0f, -190.0f));
+		model = glm::translate(model, glm::vec3(85.0f, -4.0f, -50.0f));
+		model = glm::scale(model, glm::vec3(0.65f, 0.65f, 0.65f));
 		model = glm::rotate(model, 5 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		CasaArbol_M.RenderModel();//*/
 
 		//Molino
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(-100.0f, -0.5f, 190.0f));
-		model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+		model = glm::translate(model, glm::vec3(-100.0f, -5.0f, 120.0f));
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		Molino_M.RenderModel();
 
 		//reloj principal
 
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(6.0f, 6.0f, 6.0f));
+		model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));
 		model = glm::rotate(model, 90 * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		relojM.RenderModel();
@@ -1550,32 +1586,33 @@ int main()
 
 		//vias
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(-200.0f, -1.0f, 120.0f));
+		model = glm::translate(model, glm::vec3(-135.0f, -1.75f, 100.0f));
 		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));
+		model = glm::scale(model, glm::vec3(4.5f, 4.5f, 4.5f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		vias_M.RenderModel();
+
 		//vias 2
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(-200.0f, -1.0f, 0.0f));
+		model = glm::translate(model, glm::vec3(-135.0f, -1.75f, -20.0f));
 		model = glm::rotate(model, 180 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));
+		model = glm::scale(model, glm::vec3(4.5f, 4.5f, 4.5f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		vias_M.RenderModel();
 
 
 		//vias 3
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(90.0f, -1.0f, -250.0f));
+		model = glm::translate(model, glm::vec3(90.0f, -1.9f, -130.0f));
 		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));
+		model = glm::scale(model, glm::vec3(4.5f, 4.5f, 4.5f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		vias_M.RenderModel();
 		//TREN
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(90.0f, 10.0f, -250.0f));
+		model = glm::translate(model, glm::vec3(90.0f, 10.0f, -130.0f));
 		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(7.0f, 7.0f, 7.0f));
+		model = glm::scale(model, glm::vec3(3.5f, 3.5f, 3.5f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		tren_M.RenderModel();
 
@@ -1661,7 +1698,7 @@ int main()
 		//MEGAMAN
 		//cuerpo
 		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(100.0f, -2.0f, 90.0f));
+		model = glm::translate(model, glm::vec3(40.0f, -2.0f, 90.0f));
 		model = glm::rotate(model, 90 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 		if (mega2) {
 			model = glm::rotate(model, rotHombroIM * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
